@@ -1,11 +1,7 @@
-// ignore_for_file: use_build_context_synchronously
-
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
-import 'trip_details_page.dart';
-import '../modals/add_trip_modal.dart';
+import 'package:trip_app/services/trip_service.dart';
+import 'package:trip_app/widgets/trip_card.dart';
+import 'package:trip_app/widgets/add_trip_modal.dart';
 
 class TripListPage extends StatefulWidget {
   const TripListPage({super.key});
@@ -25,129 +21,29 @@ class _TripListPageState extends State<TripListPage> {
   }
 
   Future<void> _loadTrips() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    try {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('trips')
-          .get();
-
-      setState(() {
-        trips = querySnapshot.docs.map((doc) {
-          final data = doc.data();
-          data['id'] = doc.id;
-
-          // Safely handle null values for startDate and endDate
-          data['startDate'] = data['startDate'] != null
-              ? (data['startDate'] as Timestamp).toDate()
-              : null;
-          data['endDate'] = data['endDate'] != null
-              ? (data['endDate'] as Timestamp).toDate()
-              : null;
-
-          return data;
-        }).toList();
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading trips: $e')),
-      );
-    }
+    final tripsData = await TripService.loadTrips();
+    setState(() {
+      trips = tripsData;
+      _isLoading = false;
+    });
   }
 
   Future<void> _addTrip(Map<String, dynamic> tripData) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    try {
-      // Add to Firestore
-      final docRef = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('trips')
-          .add({
-        'title': tripData['title'],
-        'startDate': tripData['startDate'] != null
-            ? Timestamp.fromDate(tripData['startDate'])
-            : null,
-        'endDate': tripData['endDate'] != null
-            ? Timestamp.fromDate(tripData['endDate'])
-            : null,
-      });
-
-      // Add ID to local trip data
-      tripData['id'] = docRef.id;
-
-      setState(() {
-        trips.add(tripData);
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error adding trip: $e')),
-      );
-    }
+    await TripService.addTrip(tripData);
+    setState(() {
+      trips.add(tripData);
+    });
   }
 
   Future<void> _deleteTrip(Map<String, dynamic> trip) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    try {
-      // Remove from Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('trips')
-          .doc(trip['id'])
-          .delete();
-
-      setState(() {
-        trips.remove(trip);
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Trip "${trip['title']}" deleted',
-            style: const TextStyle(color: Colors.white),
-          ),
-          action: SnackBarAction(
-            label: 'Undo',
-            textColor: Colors.yellow,
-            onPressed: () => _addTrip(trip),
-          ),
-          backgroundColor: Colors.blueGrey,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error deleting trip: $e')),
-      );
-    }
+    await TripService.deleteTrip(trip);
+    setState(() {
+      trips.remove(trip);
+    });
   }
 
-  // Log out method
   Future<void> _logOut() async {
-    try {
-      await FirebaseAuth.instance.signOut();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Logged out successfully!")),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error logging out: $e')),
-      );
-    }
+    await TripService.logOut();
   }
 
   Future<void> _openAddTripModal() async {
@@ -158,7 +54,6 @@ class _TripListPageState extends State<TripListPage> {
         return AddTripModal();
       },
     );
-
     if (result != null) {
       await _addTrip(result);
     }
@@ -168,8 +63,7 @@ class _TripListPageState extends State<TripListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Trip Planner',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Trip Planner', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           IconButton(
@@ -187,7 +81,7 @@ class _TripListPageState extends State<TripListPage> {
                   padding: const EdgeInsets.all(8.0),
                   itemBuilder: (context, index) {
                     final trip = trips[index];
-                    return _buildTripCard(trip);
+                    return TripCard(trip: trip, onDelete: () => _deleteTrip(trip));
                   },
                 ),
       floatingActionButton: FloatingActionButton(
@@ -227,84 +121,6 @@ class _TripListPageState extends State<TripListPage> {
             textAlign: TextAlign.center,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTripCard(Map<String, dynamic> trip) {
-    return Card(
-      elevation: 6,
-      margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.blue.shade200, Colors.blueAccent.shade700],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(15),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    trip['title'] ?? 'No Title', // Provide a fallback value
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  Icon(Icons.flight_takeoff, color: Colors.white70, size: 24),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${trip['startDate'] != null ? DateFormat.yMMMd().format(trip['startDate']) : 'No start date'}'
-                ' - '
-                '${trip['endDate'] != null ? DateFormat.yMMMd().format(trip['endDate']) : 'No end date'}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.info, size: 20),
-                    label: const Text('View Details'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.blueAccent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => TripDetailsPage(trip: trip),
-                        ),
-                      );
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _deleteTrip(trip),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

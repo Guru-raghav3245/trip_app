@@ -152,3 +152,22 @@ class CurrencyNotifier extends StateNotifier<String> {
     state = newCurrency;
   }
 }
+
+final imagesProvider = StateNotifierProvider.family<ImagesNotifier, Map<DateTime, List<String>>, String>((ref, tripId) {
+  return ImagesNotifier();
+});
+
+class ImagesNotifier extends StateNotifier<Map<DateTime, List<String>>> {
+  ImagesNotifier() : super({});
+
+  void addImage(DateTime date, String imagePath) {
+    final images = state[date] ?? [];
+    state = {...state, date: [...images, imagePath]};
+  }
+
+  void removeImage(DateTime date, String imagePath) {
+    final images = state[date] ?? [];
+    images.remove(imagePath);
+    state = {...state, date: images};
+  }
+}

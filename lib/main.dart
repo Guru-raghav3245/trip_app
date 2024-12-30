@@ -4,7 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // Add this import
 import 'package:trip_app/screens/auth_screen.dart';
 import 'package:trip_app/screens/trip_list_page.dart';
-import 'firebase_options.dart';
+import 'services/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

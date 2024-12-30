@@ -18,6 +18,7 @@ class _AuthScreenState extends State<AuthScreen> {
   var _isLogin = true;
   var _enteredEmail = '';
   var _enteredPassword = '';
+  var _enteredUsername = ''; // New field for username
   var _isAuthenticating = false;
 
   void _submit() async {
@@ -40,21 +41,28 @@ class _AuthScreenState extends State<AuthScreen> {
           password: _enteredPassword,
         );
         print(userCredentials);
-      } else {
+      } // In the _submit() method, update the sign-up section:
+      else {
         final userCredentials = await _firebase.createUserWithEmailAndPassword(
           email: _enteredEmail,
           password: _enteredPassword,
         );
 
-        FirebaseFirestore.instance.collection('users').doc(userCredentials.user!.uid).set({
-          'username': 'to be done...',
-          'email': _enteredEmail,
+        // Store user details in Firestore - NOTE THE CHANGE IN DOCUMENT ID
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredentials.user!.uid) // Use the UID as the document ID
+            .set({
+          'username': _enteredUsername,
+          'email': _enteredEmail.toLowerCase(), // Store email in lowercase
         });
       }
     } on FirebaseAuthException catch (error) {
       if (error.code == 'email-already-in-use') {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('This email is already in use. Please try another one.')),
+          SnackBar(
+              content: Text(
+                  'This email is already in use. Please try another one.')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -76,8 +84,6 @@ class _AuthScreenState extends State<AuthScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Removed image section
-
               Card(
                 margin: const EdgeInsets.all(20),
                 child: SingleChildScrollView(
@@ -88,6 +94,25 @@ class _AuthScreenState extends State<AuthScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // Add username field for signup
+                          if (!_isLogin)
+                            TextFormField(
+                              decoration: const InputDecoration(
+                                labelText: 'Username',
+                              ),
+                              validator: (value) {
+                                if (value == null ||
+                                    value.trim().isEmpty ||
+                                    value.trim().length < 3) {
+                                  return 'Username must be at least 3 characters long.';
+                                }
+                                return null;
+                              },
+                              onSaved: (value) {
+                                _enteredUsername = value!;
+                              },
+                            ),
+
                           // Email field always shown
                           TextFormField(
                             decoration: const InputDecoration(
@@ -96,7 +121,9 @@ class _AuthScreenState extends State<AuthScreen> {
                             autocorrect: false,
                             textCapitalization: TextCapitalization.none,
                             validator: (value) {
-                              if (value == null || value.trim().isEmpty || !value.contains('@')) {
+                              if (value == null ||
+                                  value.trim().isEmpty ||
+                                  !value.contains('@')) {
                                 return 'Please enter a valid email address.';
                               }
                               return null;
@@ -128,7 +155,9 @@ class _AuthScreenState extends State<AuthScreen> {
                             ElevatedButton(
                               onPressed: _submit,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
                               ),
                               child: Text(_isLogin ? 'Login' : 'Signup'),
                             ),
@@ -139,11 +168,14 @@ class _AuthScreenState extends State<AuthScreen> {
                               onPressed: () {
                                 setState(() {
                                   _isLogin = !_isLogin;
-                                  _enteredEmail = '';  // Clear email and password on toggle
+                                  _enteredEmail =
+                                      ''; // Clear email and password on toggle
                                   _enteredPassword = '';
+                                  _enteredUsername = '';
                                 });
                               },
-                              child: Text(_isLogin ? 'Create an Account' : 'Login'),
+                              child: Text(
+                                  _isLogin ? 'Create an Account' : 'Login'),
                             ),
                         ],
                       ),
