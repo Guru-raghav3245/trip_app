@@ -30,28 +30,59 @@ class TripService {
     }
   }
 
-  static Future<void> addTrip(Map<String, dynamic> tripData) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+  static Future<void> inviteUserToTrip(String tripId, String email) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
 
-    try {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('trips')
-          .add({
-        'title': tripData['title'],
-        'startDate': tripData['startDate'] != null
-            ? Timestamp.fromDate(tripData['startDate'])
-            : null,
-        'endDate': tripData['endDate'] != null
-            ? Timestamp.fromDate(tripData['endDate'])
-            : null,
-      });
-    } catch (e) {
-      throw Exception('Error adding trip: $e');
+  try {
+    // Reference the trip document
+    final tripDocRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('trips')
+        .doc(tripId);
+
+    // Get the trip data
+    final tripDoc = await tripDocRef.get();
+    if (!tripDoc.exists) throw Exception("Trip not found");
+
+    // Add the email to the owners list
+    List<dynamic> owners = tripDoc.data()?['owners'] ?? [];
+    if (!owners.contains(email)) {
+      owners.add(email);
+      await tripDocRef.update({'owners': owners});
     }
+  } catch (e) {
+    throw Exception('Error inviting user: $e');
   }
+}
+
+
+  static Future<String?> addTrip(Map<String, dynamic> tripData) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return null;
+
+  try {
+    final tripDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('trips')
+        .add({
+      'title': tripData['title'],
+      'startDate': tripData['startDate'] != null
+          ? Timestamp.fromDate(tripData['startDate'])
+          : null,
+      'endDate': tripData['endDate'] != null
+          ? Timestamp.fromDate(tripData['endDate'])
+          : null,
+      'owners': [user.email], // Initialize owners with the creator's email
+    });
+    return tripDoc.id; // Return the document ID (tripId)
+  } catch (e) {
+    throw Exception('Error adding trip: $e');
+  }
+}
+
 
   static Future<void> deleteTrip(Map<String, dynamic> trip) async {
     final user = FirebaseAuth.instance.currentUser;

@@ -5,8 +5,14 @@ import 'package:trip_app/screens/trip_details_page.dart';
 class TripCard extends StatelessWidget {
   final Map<String, dynamic> trip;
   final VoidCallback onDelete;
+  final VoidCallback onInvite;
 
-  const TripCard({super.key, required this.trip, required this.onDelete});
+  const TripCard({
+    super.key,
+    required this.trip,
+    required this.onDelete,
+    required this.onInvite,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +38,7 @@ class TripCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    trip['title'] ?? 'No Title', // Provide a fallback value
+                    trip['title'] ?? 'No Title',
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -44,9 +50,9 @@ class TripCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                '${trip['startDate'] != null ? DateFormat.yMMMd().format(trip['startDate']) : 'No start date'}'
+                '${trip['startDate'] != null ? DateFormat.yMMMd().format(trip['startDate'] as DateTime) : 'No start date'}'
                 ' - '
-                '${trip['endDate'] != null ? DateFormat.yMMMd().format(trip['endDate']) : 'No end date'}',
+                '${trip['endDate'] != null ? DateFormat.yMMMd().format(trip['endDate'] as DateTime) : 'No end date'}',
                 style: const TextStyle(
                   fontSize: 16,
                   color: Colors.white70,
@@ -77,6 +83,10 @@ class TripCard extends StatelessWidget {
                   IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),
                     onPressed: onDelete,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.person_add, color: Colors.green),
+                    onPressed: onInvite,
                   ),
                 ],
               ),

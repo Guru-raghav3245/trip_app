@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:trip_app/services/trip_service.dart';
 import 'package:trip_app/widgets/trip_card.dart';
 import 'package:trip_app/widgets/add_trip_modal.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TripListPage extends StatefulWidget {
   const TripListPage({super.key});
@@ -20,20 +22,81 @@ class _TripListPageState extends State<TripListPage> {
     _loadTrips();
   }
 
-  Future<void> _loadTrips() async {
-    final tripsData = await TripService.loadTrips();
-    setState(() {
-      trips = tripsData;
-      _isLoading = false;
-    });
+  Future<void> _inviteUser(String tripId) async {
+    final emailController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Invite User'),
+          content: TextField(
+            controller: emailController,
+            decoration: const InputDecoration(labelText: 'Enter user email'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final email = emailController.text.trim();
+                if (email.isNotEmpty) {
+                  await TripService.inviteUserToTrip(tripId, email);
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Invitation sent to $email')),
+                  );
+                }
+              },
+              child: const Text('Invite'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
+  Future<void> _loadTrips() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception("User is not authenticated.");
+    }
+
+    try {
+      final tripsData = await FirebaseFirestore.instance
+          .collectionGroup('trips')
+          .where('owners', arrayContains: user.email)
+          .get();
+
+      setState(() {
+        trips = tripsData.docs.map((doc) {
+          final data = doc.data();
+          // Convert Firestore timestamps to DateTime
+          data['startDate'] = (data['startDate'] as Timestamp).toDate();
+          data['endDate'] = (data['endDate'] as Timestamp).toDate();
+          data['id'] = doc.id;
+          return data;
+        }).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      throw Exception('Error loading trips: $e');
+    }
+  }
+
+
+
   Future<void> _addTrip(Map<String, dynamic> tripData) async {
-    await TripService.addTrip(tripData);
+  final tripId = await TripService.addTrip(tripData); // Get the tripId
+  if (tripId != null) {
     setState(() {
-      trips.add(tripData);
+      trips.add({...tripData, 'id': tripId}); // Add the trip with the id
     });
   }
+}
+
 
   Future<void> _deleteTrip(Map<String, dynamic> trip) async {
     await TripService.deleteTrip(trip);
@@ -44,6 +107,7 @@ class _TripListPageState extends State<TripListPage> {
 
   Future<void> _logOut() async {
     await TripService.logOut();
+    Navigator.of(context).pushReplacementNamed('/login'); // Navigate to login screen
   }
 
   Future<void> _openAddTripModal() async {
@@ -73,7 +137,7 @@ class _TripListPageState extends State<TripListPage> {
         ],
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : trips.isEmpty
               ? _buildEmptyState()
               : ListView.builder(
@@ -81,7 +145,11 @@ class _TripListPageState extends State<TripListPage> {
                   padding: const EdgeInsets.all(8.0),
                   itemBuilder: (context, index) {
                     final trip = trips[index];
-                    return TripCard(trip: trip, onDelete: () => _deleteTrip(trip));
+                    return TripCard(
+                      trip: trip,
+                      onDelete: () => _deleteTrip(trip),
+                      onInvite: () => _inviteUser(trip['id']), // Pass the correct trip ID
+                    );
                   },
                 ),
       floatingActionButton: FloatingActionButton(
