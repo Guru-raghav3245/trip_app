@@ -59,33 +59,39 @@ class _TripListPageState extends State<TripListPage> {
   }
 
   Future<void> _loadTrips() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      throw Exception("User is not authenticated.");
-    }
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) {
+    throw Exception("User is not authenticated.");
+  }
 
-    try {
-      final tripsData = await FirebaseFirestore.instance
-          .collectionGroup('trips')
-          .where('owners', arrayContains: user.email)
-          .get();
+  try {
+    final tripsData = await FirebaseFirestore.instance
+        .collectionGroup('trips')
+        .where('owners', arrayContains: user.email)
+        .get();
 
-      setState(() {
-        trips = tripsData.docs.map((doc) {
-          final data = doc.data();
-          // Convert Firestore timestamps to DateTime
-          data['startDate'] = (data['startDate'] as Timestamp).toDate();
-          data['endDate'] = (data['endDate'] as Timestamp).toDate();
-          data['id'] = doc.id;
-          return data;
-        }).toList();
-        _isLoading = false;
-      });
-    } catch (e) {
+    setState(() {
+      trips = tripsData.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+      _isLoading = false;
+    });
+  } catch (e) {
+    if (e.toString().contains('failed-precondition')) {
+      // Show a temporary message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'The required index is still building. Please try again later.'),
+        ),
+      );
+    } else {
       throw Exception('Error loading trips: $e');
     }
   }
-
+}
 
 
   Future<void> _addTrip(Map<String, dynamic> tripData) async {

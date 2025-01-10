@@ -5,13 +5,13 @@ import 'package:trip_app/screens/trip_details_page.dart';
 class TripCard extends StatelessWidget {
   final Map<String, dynamic> trip;
   final VoidCallback onDelete;
-  final VoidCallback onInvite;
+  final VoidCallback onInvite; // New callback for inviting users
 
   const TripCard({
     super.key,
     required this.trip,
     required this.onDelete,
-    required this.onInvite,
+    required this.onInvite, // Pass this in constructor
   });
 
   @override
@@ -38,21 +38,22 @@ class TripCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    trip['title'] ?? 'No Title',
+                    trip['title'] ?? 'No Title', // Provide a fallback value
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
-                  const Icon(Icons.flight_takeoff, color: Colors.white70, size: 24),
+                  const Icon(Icons.flight_takeoff,
+                      color: Colors.white70, size: 24),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
-                '${trip['startDate'] != null ? DateFormat.yMMMd().format(trip['startDate'] as DateTime) : 'No start date'}'
+                '${trip['startDate'] != null && trip['startDate'] is DateTime ? DateFormat.yMMMd().format(trip['startDate'] as DateTime) : 'No start date'}'
                 ' - '
-                '${trip['endDate'] != null ? DateFormat.yMMMd().format(trip['endDate'] as DateTime) : 'No end date'}',
+                '${trip['endDate'] != null && trip['endDate'] is DateTime ? DateFormat.yMMMd().format(trip['endDate'] as DateTime) : 'No end date'}',
                 style: const TextStyle(
                   fontSize: 16,
                   color: Colors.white70,
@@ -85,8 +86,9 @@ class TripCard extends StatelessWidget {
                     onPressed: onDelete,
                   ),
                   IconButton(
-                    icon: const Icon(Icons.person_add, color: Colors.green),
-                    onPressed: onInvite,
+                    icon: const Icon(Icons.person_add,
+                        color: Colors.green), // Invite icon
+                    onPressed: onInvite, // Trigger the invite functionality
                   ),
                 ],
               ),

@@ -18,7 +18,6 @@ class _AuthScreenState extends State<AuthScreen> {
   var _isLogin = true;
   var _enteredEmail = '';
   var _enteredPassword = '';
-  var _enteredUsername = ''; // New field for username
   var _isAuthenticating = false;
 
   void _submit() async {
@@ -41,19 +40,17 @@ class _AuthScreenState extends State<AuthScreen> {
           password: _enteredPassword,
         );
         print(userCredentials);
-      } // In the _submit() method, update the sign-up section:
-      else {
+      } else {
         final userCredentials = await _firebase.createUserWithEmailAndPassword(
           email: _enteredEmail,
           password: _enteredPassword,
         );
 
-        // Store user details in Firestore - NOTE THE CHANGE IN DOCUMENT ID
+        // Store user details in Firestore without username
         await FirebaseFirestore.instance
             .collection('users')
             .doc(userCredentials.user!.uid) // Use the UID as the document ID
             .set({
-          'username': _enteredUsername,
           'email': _enteredEmail.toLowerCase(), // Store email in lowercase
         });
       }
@@ -94,25 +91,6 @@ class _AuthScreenState extends State<AuthScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Add username field for signup
-                          if (!_isLogin)
-                            TextFormField(
-                              decoration: const InputDecoration(
-                                labelText: 'Username',
-                              ),
-                              validator: (value) {
-                                if (value == null ||
-                                    value.trim().isEmpty ||
-                                    value.trim().length < 3) {
-                                  return 'Username must be at least 3 characters long.';
-                                }
-                                return null;
-                              },
-                              onSaved: (value) {
-                                _enteredUsername = value!;
-                              },
-                            ),
-
                           // Email field always shown
                           TextFormField(
                             decoration: const InputDecoration(
@@ -171,7 +149,6 @@ class _AuthScreenState extends State<AuthScreen> {
                                   _enteredEmail =
                                       ''; // Clear email and password on toggle
                                   _enteredPassword = '';
-                                  _enteredUsername = '';
                                 });
                               },
                               child: Text(

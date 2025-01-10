@@ -6,7 +6,7 @@ import 'package:trip_app/services/riverpod_providers.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'full_image_viewer.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TripDetailsPage extends ConsumerStatefulWidget {
   final Map<String, dynamic> trip;
@@ -26,20 +26,24 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
   final TextEditingController noteController = TextEditingController();
 
   @override
-  @override
   void initState() {
     super.initState();
-    
-    final startDate = widget.trip['startDate'] as DateTime? ?? DateTime.now();
-    final endDate = widget.trip['endDate'] as DateTime? ?? DateTime.now();
+
+    final startDateTimestamp = widget.trip['startDate'];
+    final endDateTimestamp = widget.trip['endDate'];
+
+    final startDate = (startDateTimestamp is Timestamp)
+        ? startDateTimestamp.toDate()
+        : (startDateTimestamp as DateTime? ?? DateTime.now());
+    final endDate = (endDateTimestamp is Timestamp)
+        ? endDateTimestamp.toDate()
+        : (endDateTimestamp as DateTime? ?? DateTime.now());
 
     tripDates = List.generate(
       endDate.difference(startDate).inDays + 1,
       (i) => startDate.add(Duration(days: i)),
     );
-    
   }
-
 
   double _calculateTotalExpenses(
       DateTime date, Map<DateTime, List<Map<String, dynamic>>> expenses) {
@@ -139,9 +143,9 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 8),
-                 Text(
-                    'Duration: ${DateFormat.yMMMd().format(widget.trip['startDate'])} - '
-                    '${DateFormat.yMMMd().format(widget.trip['endDate'])}',
+                  Text(
+                    'Duration: ${DateFormat.yMMMd().format(widget.trip['startDate'].toDate())} - '
+                    '${DateFormat.yMMMd().format(widget.trip['endDate'].toDate())}',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
