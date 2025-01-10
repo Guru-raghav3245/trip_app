@@ -13,6 +13,7 @@ class AuthScreen extends StatefulWidget {
   }
 }
 
+// Authentication state class
 class _AuthScreenState extends State<AuthScreen> {
   final _form = GlobalKey<FormState>();
   var _isLogin = true;
@@ -20,6 +21,7 @@ class _AuthScreenState extends State<AuthScreen> {
   var _enteredPassword = '';
   var _isAuthenticating = false;
 
+  // Submit form
   void _submit() async {
     final isValid = _form.currentState!.validate();
 

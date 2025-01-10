@@ -8,6 +8,7 @@ import 'dart:io';
 import 'full_image_viewer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// Trip Details Page.
 class TripDetailsPage extends ConsumerStatefulWidget {
   final Map<String, dynamic> trip;
 
@@ -45,6 +46,7 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
     );
   }
 
+  // Calculate the total expenses for a specific date
   double _calculateTotalExpenses(
       DateTime date, Map<DateTime, List<Map<String, dynamic>>> expenses) {
     return expenses[date]
@@ -52,6 +54,7 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
         0.0;
   }
 
+  // Show the currency selector
   void _showCurrencySelector(String selectedCurrency) {
     showCurrencyPicker(
       context: context,
@@ -64,6 +67,7 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
     );
   }
 
+  // Add an expense
   void _addExpense(DateTime date, String tripId) {
     if (expenseNameController.text.isNotEmpty &&
         double.tryParse(expenseAmountController.text) != null) {
@@ -80,7 +84,8 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
       expenseAmountController.clear();
     }
   }
-
+  
+  // Capture an image
   Future<void> _captureImage(DateTime date, String tripId) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
@@ -91,6 +96,7 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
     }
   }
 
+  // Select an image from the gallery
   Future<void> _selectFromGallery(DateTime date, String tripId) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -168,6 +174,7 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
     );
   }
 
+  // Build a date tile
   Widget _buildDateTile(
       DateTime date,
       Map<DateTime, List<Map<String, dynamic>>> expenses,
@@ -228,6 +235,7 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
     );
   }
 
+  // Build the expenses section
   Widget _buildExpensesSection(
       DateTime date,
       Map<DateTime, List<Map<String, dynamic>>> expenses,

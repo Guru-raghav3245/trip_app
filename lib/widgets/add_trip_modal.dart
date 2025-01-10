@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+// Modal for adding a new trip
 class AddTripModal extends StatefulWidget {
   const AddTripModal({super.key});
 

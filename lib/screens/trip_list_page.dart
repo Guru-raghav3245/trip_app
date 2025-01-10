@@ -12,6 +12,7 @@ class TripListPage extends StatefulWidget {
   State<TripListPage> createState() => _TripListPageState();
 }
 
+// State class
 class _TripListPageState extends State<TripListPage> {
   List<Map<String, dynamic>> trips = [];
   bool _isLoading = true;
@@ -22,6 +23,7 @@ class _TripListPageState extends State<TripListPage> {
     _loadTrips();
   }
 
+  // Invite user to trip
   Future<void> _inviteUser(String tripId) async {
     final emailController = TextEditingController();
 
@@ -58,6 +60,7 @@ class _TripListPageState extends State<TripListPage> {
     );
   }
 
+  // Load trips from firebase
   Future<void> _loadTrips() async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) {
@@ -93,7 +96,7 @@ class _TripListPageState extends State<TripListPage> {
   }
 }
 
-
+  // Add a trip to firebase
   Future<void> _addTrip(Map<String, dynamic> tripData) async {
   final tripId = await TripService.addTrip(tripData); // Get the tripId
   if (tripId != null) {
@@ -103,7 +106,7 @@ class _TripListPageState extends State<TripListPage> {
   }
 }
 
-
+  // Delete a trip from firebase
   Future<void> _deleteTrip(Map<String, dynamic> trip) async {
     await TripService.deleteTrip(trip);
     setState(() {
@@ -111,11 +114,13 @@ class _TripListPageState extends State<TripListPage> {
     });
   }
 
+  // Log out the user
   Future<void> _logOut() async {
     await TripService.logOut();
     Navigator.of(context).pushReplacementNamed('/login'); // Navigate to login screen
   }
 
+  // Open the add trip modal
   Future<void> _openAddTripModal() async {
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
@@ -129,6 +134,7 @@ class _TripListPageState extends State<TripListPage> {
     }
   }
 
+  // Build the widget
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -166,6 +172,7 @@ class _TripListPageState extends State<TripListPage> {
     );
   }
 
+  // Empty state widget
   Widget _buildEmptyState() {
     return Center(
       child: Column(

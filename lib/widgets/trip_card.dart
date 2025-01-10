@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:trip_app/screens/trip_details_page.dart';
 
+// Card/Button for displaying trip details
 class TripCard extends StatelessWidget {
   final Map<String, dynamic> trip;
   final VoidCallback onDelete;
-  final VoidCallback onInvite; // New callback for inviting users
+  final VoidCallback onInvite;
 
   const TripCard({
     super.key,
     required this.trip,
     required this.onDelete,
-    required this.onInvite, // Pass this in constructor
+    required this.onInvite,
   });
 
   @override
@@ -38,7 +39,7 @@ class TripCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    trip['title'] ?? 'No Title', // Provide a fallback value
+                    trip['title'] ?? 'No Title',
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -87,8 +88,8 @@ class TripCard extends StatelessWidget {
                   ),
                   IconButton(
                     icon: const Icon(Icons.person_add,
-                        color: Colors.green), // Invite icon
-                    onPressed: onInvite, // Trigger the invite functionality
+                        color: Colors.green),
+                    onPressed: onInvite,
                   ),
                 ],
               ),

@@ -6,18 +6,19 @@ import 'package:trip_app/screens/auth_screen.dart';
 import 'package:trip_app/screens/trip_list_page.dart';
 import 'services/firebase_options.dart';
 
+// Root function
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(
-    // Wrap the App with ProviderScope
     ProviderScope(
       child: const App(),
     ),
   );
 }
 
+// App widget
 class App extends StatelessWidget {
   const App({super.key});
 

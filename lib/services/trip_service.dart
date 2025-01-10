@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// Service class for managing trips
 class TripService {
   static Future<List<Map<String, dynamic>>> loadTrips() async {
     final user = FirebaseAuth.instance.currentUser;

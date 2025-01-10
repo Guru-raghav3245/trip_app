@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 
+// Full screen image viewer
 class FullScreenImageViewer extends StatelessWidget {
   final String imagePath;
 
