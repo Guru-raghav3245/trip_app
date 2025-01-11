@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'reset_password_screen.dart';
 
 final _firebase = FirebaseAuth.instance;
 
@@ -13,7 +14,6 @@ class AuthScreen extends StatefulWidget {
   }
 }
 
-// Authentication state class
 class _AuthScreenState extends State<AuthScreen> {
   final _form = GlobalKey<FormState>();
   var _isLogin = true;
@@ -140,6 +140,21 @@ class _AuthScreenState extends State<AuthScreen> {
                                     .primaryContainer,
                               ),
                               child: Text(_isLogin ? 'Login' : 'Signup'),
+                            ),
+                          const SizedBox(height: 12),
+                          // Forgot password button
+                          if (!_isAuthenticating)
+                            TextButton(
+                              onPressed: () {
+                                // Navigate to ForgotPasswordScreen
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ResetPasswordScreen(),
+                                  ),
+                                );
+                              },
+                              child: const Text('Forgot Password?'),
                             ),
                           const SizedBox(height: 12),
                           // Toggle between Login and Signup

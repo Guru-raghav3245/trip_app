@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // Add this import
-import 'package:trip_app/screens/auth_screen.dart';
+import 'package:trip_app/screens/auth_screen/auth_screen.dart';
 import 'package:trip_app/screens/trip_list_page.dart';
 import 'services/firebase_options.dart';
 

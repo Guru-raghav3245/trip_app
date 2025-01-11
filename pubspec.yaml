@@ -39,7 +39,7 @@ dependencies:
   path_provider: ^2.1.5
   permission_handler: ^11.3.1
   image_picker: ^1.1.2
-  firebase_dynamic_links: ^6.0.11
+  flutter_overlay_window: ^0.4.3
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
