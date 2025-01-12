@@ -58,7 +58,6 @@ class TripService {
   }
 }
 
-
   static Future<String?> addTrip(Map<String, dynamic> tripData) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) return null;
@@ -84,7 +83,6 @@ class TripService {
   }
 }
 
-
   static Future<void> deleteTrip(Map<String, dynamic> trip) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -107,5 +105,29 @@ class TripService {
     } catch (e) {
       throw Exception('Error logging out: $e');
     }
+  }
+
+  static Future<void> toggleTripActive(String tripId, bool isActive) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final batch = FirebaseFirestore.instance.batch();
+    final tripsRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('trips');
+
+    if (isActive) {
+      // First, deactivate all trips
+      final allTrips = await tripsRef.get();
+      for (var doc in allTrips.docs) {
+        batch.update(doc.reference, {'isActive': false});
+      }
+    }
+
+    // Then activate/deactivate the selected trip
+    batch.update(tripsRef.doc(tripId), {'isActive': isActive});
+
+    await batch.commit();
   }
 }

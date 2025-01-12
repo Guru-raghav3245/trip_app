@@ -4,6 +4,7 @@ import 'package:trip_app/widgets/trip_card.dart';
 import 'package:trip_app/widgets/add_trip_modal.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:trip_app/widgets/draggable_trip_overlay.dart';
 
 class TripListPage extends StatefulWidget {
   const TripListPage({super.key});
@@ -21,6 +22,25 @@ class _TripListPageState extends State<TripListPage> {
   void initState() {
     super.initState();
     _loadTrips();
+  }
+
+  Future<void> _toggleTripActive(
+      Map<String, dynamic> trip, bool isActive) async {
+    try {
+      await TripService.toggleTripActive(trip['id'], isActive);
+      await _loadTrips(); // Reload all trips to get updated states
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating trip status: $e')),
+      );
+    }
+  }
+
+  Map<String, dynamic>? get activeTrip {
+    return trips.cast<Map<String, dynamic>>().firstWhere(
+          (trip) => trip['isActive'] == true,
+          orElse: () => {},
+        );
   }
 
   void _handleCollaboratorsUpdated(
@@ -150,45 +170,53 @@ class _TripListPageState extends State<TripListPage> {
 
   // Build the widget
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Trip Planner',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.exit_to_app),
-            onPressed: _logOut,
-          ),
-        ],
+Widget build(BuildContext context) {
+  return Stack(
+    children: [
+      Scaffold(
+        appBar: AppBar(
+          title: const Text('Trip Planner',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.exit_to_app),
+              onPressed: _logOut,
+            ),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : trips.isEmpty
+                ? _buildEmptyState()
+                : ListView.builder(
+                    itemCount: trips.length,
+                    padding: const EdgeInsets.all(8.0),
+                    itemBuilder: (context, index) {
+                      final trip = trips[index];
+                      return TripCard(
+                        trip: trip,
+                        onDelete: () => _deleteTrip(trip),
+                        onInvite: () => _inviteUser(trip['id']),
+                        onToggleActive: (isActive) =>
+                            _toggleTripActive(trip, isActive),
+                        onCollaboratorsUpdated: (updatedCollaborators) =>
+                            _handleCollaboratorsUpdated(
+                                trip, updatedCollaborators),
+                      );
+                    },
+                  ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _openAddTripModal,
+          tooltip: 'Add a new trip',
+          child: const Icon(Icons.add),
+        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : trips.isEmpty
-              ? _buildEmptyState()
-              : ListView.builder(
-                  itemCount: trips.length,
-                  padding: const EdgeInsets.all(8.0),
-                  itemBuilder: (context, index) {
-                    final trip = trips[index];
-                    return TripCard(
-                      trip: trip,
-                      onDelete: () => _deleteTrip(trip),
-                      onInvite: () => _inviteUser(trip['id']),
-                      onCollaboratorsUpdated: (updatedCollaborators) =>
-                          _handleCollaboratorsUpdated(
-                              trip, updatedCollaborators),
-                    );
-                  },
-                ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openAddTripModal,
-        tooltip: 'Add a new trip',
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
+      if (activeTrip?.isNotEmpty == true)
+        DraggableTripOverlay(trip: activeTrip!),
+    ],
+  );
+}
 
   // Empty state widget
   Widget _buildEmptyState() {
