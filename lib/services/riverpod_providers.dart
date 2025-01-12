@@ -76,7 +76,6 @@ class ExpensesNotifier
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Convert DateTime keys to string for Firebase storage
     final expensesMap = state
         .map((date, expenses) => MapEntry(date.toIso8601String(), expenses));
 

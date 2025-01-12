@@ -5,7 +5,7 @@ import 'package:currency_picker/currency_picker.dart';
 import 'package:trip_app/services/riverpod_providers.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'full_image_viewer.dart';
+import '../full_image_viewer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Trip Details Page.
@@ -45,6 +45,8 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
       (i) => startDate.add(Duration(days: i)),
     );
   }
+
+  
 
   // Calculate the total expenses for a specific date
   double _calculateTotalExpenses(

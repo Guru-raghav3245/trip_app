@@ -1,19 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:trip_app/screens/trip_details_page.dart';
+import 'package:trip_app/screens/trip_details/trip_details_page.dart';
+import 'package:trip_app/screens/trip_details/collaborators_dialog.dart';
 
-// Card/Button for displaying trip details
 class TripCard extends StatelessWidget {
   final Map<String, dynamic> trip;
   final VoidCallback onDelete;
   final VoidCallback onInvite;
+  final Function(List<String>)? onCollaboratorsUpdated;
 
   const TripCard({
     super.key,
     required this.trip,
     required this.onDelete,
     required this.onInvite,
+    this.onCollaboratorsUpdated,
   });
+
+  void _showCollaboratorsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => ManageCollaboratorsDialog(
+        tripId: trip['id'],
+        collaborators: List<String>.from(trip['owners'] ?? []),
+        onCollaboratorsUpdated: (updatedCollaborators) {
+          onCollaboratorsUpdated?.call(updatedCollaborators);
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,8 +61,7 @@ class TripCard extends StatelessWidget {
                       color: Colors.white,
                     ),
                   ),
-                  const Icon(Icons.flight_takeoff,
-                      color: Colors.white70, size: 24),
+                  const Icon(Icons.flight_takeoff, color: Colors.white70, size: 24),
                 ],
               ),
               const SizedBox(height: 8),
@@ -82,14 +96,21 @@ class TripCard extends StatelessWidget {
                       );
                     },
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: onDelete,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.person_add,
-                        color: Colors.green),
-                    onPressed: onInvite,
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.group, color: Colors.white),
+                        onPressed: () => _showCollaboratorsDialog(context),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.person_add, color: Colors.green),
+                        onPressed: onInvite,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: onDelete,
+                      ),
+                    ],
                   ),
                 ],
               ),

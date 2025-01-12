@@ -23,6 +23,19 @@ class _TripListPageState extends State<TripListPage> {
     _loadTrips();
   }
 
+  void _handleCollaboratorsUpdated(
+      Map<String, dynamic> trip, List<String> updatedCollaborators) {
+    setState(() {
+      final index = trips.indexOf(trip);
+      if (index != -1) {
+        trips[index] = {
+          ...trip,
+          'owners': updatedCollaborators,
+        };
+      }
+    });
+  }
+
   // Invite user to trip
   Future<void> _inviteUser(String tripId) async {
     final emailController = TextEditingController();
@@ -62,49 +75,49 @@ class _TripListPageState extends State<TripListPage> {
 
   // Load trips from firebase
   Future<void> _loadTrips() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) {
-    throw Exception("User is not authenticated.");
-  }
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception("User is not authenticated.");
+    }
 
-  try {
-    final tripsData = await FirebaseFirestore.instance
-        .collectionGroup('trips')
-        .where('owners', arrayContains: user.email)
-        .get();
+    try {
+      final tripsData = await FirebaseFirestore.instance
+          .collectionGroup('trips')
+          .where('owners', arrayContains: user.email)
+          .get();
 
-    setState(() {
-      trips = tripsData.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id;
-        return data;
-      }).toList();
-      _isLoading = false;
-    });
-  } catch (e) {
-    if (e.toString().contains('failed-precondition')) {
-      // Show a temporary message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'The required index is still building. Please try again later.'),
-        ),
-      );
-    } else {
-      throw Exception('Error loading trips: $e');
+      setState(() {
+        trips = tripsData.docs.map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          return data;
+        }).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (e.toString().contains('failed-precondition')) {
+        // Show a temporary message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'The required index is still building. Please try again later.'),
+          ),
+        );
+      } else {
+        throw Exception('Error loading trips: $e');
+      }
     }
   }
-}
 
   // Add a trip to firebase
   Future<void> _addTrip(Map<String, dynamic> tripData) async {
-  final tripId = await TripService.addTrip(tripData); // Get the tripId
-  if (tripId != null) {
-    setState(() {
-      trips.add({...tripData, 'id': tripId}); // Add the trip with the id
-    });
+    final tripId = await TripService.addTrip(tripData); // Get the tripId
+    if (tripId != null) {
+      setState(() {
+        trips.add({...tripData, 'id': tripId}); // Add the trip with the id
+      });
+    }
   }
-}
 
   // Delete a trip from firebase
   Future<void> _deleteTrip(Map<String, dynamic> trip) async {
@@ -117,7 +130,8 @@ class _TripListPageState extends State<TripListPage> {
   // Log out the user
   Future<void> _logOut() async {
     await TripService.logOut();
-    Navigator.of(context).pushReplacementNamed('/login'); // Navigate to login screen
+    Navigator.of(context)
+        .pushReplacementNamed('/login'); // Navigate to login screen
   }
 
   // Open the add trip modal
@@ -139,7 +153,8 @@ class _TripListPageState extends State<TripListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Trip Planner', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Trip Planner',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           IconButton(
@@ -160,7 +175,10 @@ class _TripListPageState extends State<TripListPage> {
                     return TripCard(
                       trip: trip,
                       onDelete: () => _deleteTrip(trip),
-                      onInvite: () => _inviteUser(trip['id']), // Pass the correct trip ID
+                      onInvite: () => _inviteUser(trip['id']),
+                      onCollaboratorsUpdated: (updatedCollaborators) =>
+                          _handleCollaboratorsUpdated(
+                              trip, updatedCollaborators),
                     );
                   },
                 ),
