@@ -21,7 +21,6 @@ class _AuthScreenState extends State<AuthScreen> {
   var _enteredPassword = '';
   var _isAuthenticating = false;
 
-  // Submit form
   void _submit() async {
     final isValid = _form.currentState!.validate();
 
@@ -48,20 +47,17 @@ class _AuthScreenState extends State<AuthScreen> {
           password: _enteredPassword,
         );
 
-        // Store user details in Firestore without username
         await FirebaseFirestore.instance
             .collection('users')
-            .doc(userCredentials.user!.uid) // Use the UID as the document ID
+            .doc(userCredentials.user!.uid)
             .set({
-          'email': _enteredEmail.toLowerCase(), // Store email in lowercase
+          'email': _enteredEmail.toLowerCase(),
         });
       }
     } on FirebaseAuthException catch (error) {
       if (error.code == 'email-already-in-use') {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  'This email is already in use. Please try another one.')),
+          SnackBar(content: Text('This email is already in use. Please try another one.')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -83,98 +79,118 @@ class _AuthScreenState extends State<AuthScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Card(
-                margin: const EdgeInsets.all(20),
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Form(
-                      key: _form,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Email field always shown
-                          TextFormField(
-                            decoration: const InputDecoration(
-                              labelText: 'Email Address',
-                            ),
-                            autocorrect: false,
-                            textCapitalization: TextCapitalization.none,
-                            validator: (value) {
-                              if (value == null ||
-                                  value.trim().isEmpty ||
-                                  !value.contains('@')) {
-                                return 'Please enter a valid email address.';
-                              }
-                              return null;
-                            },
-                            onSaved: (value) {
-                              _enteredEmail = value!;
-                            },
-                          ),
-                          // Password field
-                          TextFormField(
-                            decoration: const InputDecoration(
-                              labelText: 'Password',
-                            ),
-                            obscureText: true,
-                            validator: (value) {
-                              if (value == null || value.trim().length < 6) {
-                                return 'Password must be 6 characters long.';
-                              }
-                              return null;
-                            },
-                            onSaved: (value) {
-                              _enteredPassword = value!;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          // Show loading spinner during authentication
-                          if (_isAuthenticating) CircularProgressIndicator(),
-                          if (!_isAuthenticating)
-                            ElevatedButton(
-                              onPressed: _submit,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context)
-                                    .colorScheme
-                                    .primaryContainer,
-                              ),
-                              child: Text(_isLogin ? 'Login' : 'Signup'),
-                            ),
-                          const SizedBox(height: 12),
-                          // Forgot password button
-                          if (!_isAuthenticating)
-                            TextButton(
-                              onPressed: () {
-                                // Navigate to ForgotPasswordScreen
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => ResetPasswordScreen(),
-                                  ),
-                                );
-                              },
-                              child: const Text('Forgot Password?'),
-                            ),
-                          const SizedBox(height: 12),
-                          // Toggle between Login and Signup
-                          if (!_isAuthenticating)
-                            TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  _isLogin = !_isLogin;
-                                  _enteredEmail =
-                                      ''; // Clear email and password on toggle
-                                  _enteredPassword = '';
-                                });
-                              },
-                              child: Text(
-                                  _isLogin ? 'Create an Account' : 'Login'),
-                            ),
-                        ],
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  children: [
+                    // Add Logo or App Name here
+                    const Icon(Icons.account_circle, size: 100, color: Colors.white),
+                    const SizedBox(height: 20),
+                    Text(
+                      _isLogin ? 'Login to Your Account' : 'Create a New Account',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 20),
+                    Card(
+                      elevation: 8,
+                      margin: const EdgeInsets.all(20),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Form(
+                          key: _form,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Email field with Icon
+                              TextFormField(
+                                decoration: const InputDecoration(
+                                  labelText: 'Email Address',
+                                  prefixIcon: Icon(Icons.email),
+                                  border: OutlineInputBorder(),
+                                ),
+                                autocorrect: false,
+                                textCapitalization: TextCapitalization.none,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty || !value.contains('@')) {
+                                    return 'Please enter a valid email address.';
+                                  }
+                                  return null;
+                                },
+                                onSaved: (value) {
+                                  _enteredEmail = value!;
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              // Password field with Icon
+                              TextFormField(
+                                decoration: const InputDecoration(
+                                  labelText: 'Password',
+                                  prefixIcon: Icon(Icons.lock),
+                                  border: OutlineInputBorder(),
+                                ),
+                                obscureText: true,
+                                validator: (value) {
+                                  if (value == null || value.trim().length < 6) {
+                                    return 'Password must be at least 6 characters long.';
+                                  }
+                                  return null;
+                                },
+                                onSaved: (value) {
+                                  _enteredPassword = value!;
+                                },
+                              ),
+                              const SizedBox(height: 20),
+                              // Show loading spinner during authentication
+                              if (_isAuthenticating) const CircularProgressIndicator(),
+                              if (!_isAuthenticating)
+                                ElevatedButton(
+                                  onPressed: _submit,
+                                  style: ElevatedButton.styleFrom(
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 40),
+                                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                  ),
+                                  child: Text(_isLogin ? 'Login' : 'Signup', style: TextStyle(fontSize: 16)),
+                                ),
+                              const SizedBox(height: 12),
+                              // Forgot password button
+                              if (!_isAuthenticating)
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => ResetPasswordScreen()),
+                                    );
+                                  },
+                                  child: const Text('Forgot Password?', style: TextStyle(color: Colors.blue)),
+                                ),
+                              const SizedBox(height: 12),
+                              // Toggle between Login and Signup
+                              if (!_isAuthenticating)
+                                TextButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _isLogin = !_isLogin;
+                                      _enteredEmail = '';
+                                      _enteredPassword = '';
+                                    });
+                                  },
+                                  child: Text(
+                                    _isLogin ? 'Create an Account' : 'Login',
+                                    style: TextStyle(color: Colors.blue),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
