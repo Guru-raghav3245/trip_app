@@ -20,7 +20,7 @@ class _AuthScreenState extends State<AuthScreen> {
   var _enteredEmail = '';
   var _enteredPassword = '';
   var _isAuthenticating = false;
-  var _passwordVisible = false; // New variable to control password visibility
+  var _passwordVisible = false; 
 
   void _submit() async {
     final isValid = _form.currentState!.validate();
@@ -58,7 +58,9 @@ class _AuthScreenState extends State<AuthScreen> {
     } on FirebaseAuthException catch (error) {
       if (error.code == 'email-already-in-use') {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('This email is already in use. Please try another one.')),
+          SnackBar(
+              content: Text(
+                  'This email is already in use. Please try another one.')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -84,10 +86,13 @@ class _AuthScreenState extends State<AuthScreen> {
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
                   children: [
-                    const Icon(Icons.account_circle, size: 100, color: Colors.white),
+                    const Icon(Icons.account_circle,
+                        size: 100, color: Colors.white),
                     const SizedBox(height: 20),
                     Text(
-                      _isLogin ? 'Login to Your Account' : 'Create a New Account',
+                      _isLogin
+                          ? 'Login to Your Account'
+                          : 'Create a New Account',
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -98,7 +103,8 @@ class _AuthScreenState extends State<AuthScreen> {
                     Card(
                       elevation: 8,
                       margin: const EdgeInsets.all(20),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Form(
@@ -115,7 +121,9 @@ class _AuthScreenState extends State<AuthScreen> {
                                 autocorrect: false,
                                 textCapitalization: TextCapitalization.none,
                                 validator: (value) {
-                                  if (value == null || value.trim().isEmpty || !value.contains('@')) {
+                                  if (value == null ||
+                                      value.trim().isEmpty ||
+                                      !value.contains('@')) {
                                     return 'Please enter a valid email address.';
                                   }
                                   return null;
@@ -132,7 +140,9 @@ class _AuthScreenState extends State<AuthScreen> {
                                   border: const OutlineInputBorder(),
                                   suffixIcon: IconButton(
                                     icon: Icon(
-                                      _passwordVisible ? Icons.visibility : Icons.visibility_off,
+                                      _passwordVisible
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
                                     ),
                                     onPressed: () {
                                       setState(() {
@@ -143,7 +153,8 @@ class _AuthScreenState extends State<AuthScreen> {
                                 ),
                                 obscureText: !_passwordVisible,
                                 validator: (value) {
-                                  if (value == null || value.trim().length < 6) {
+                                  if (value == null ||
+                                      value.trim().length < 6) {
                                     return 'Password must be at least 6 characters long.';
                                   }
                                   return null;
@@ -153,16 +164,23 @@ class _AuthScreenState extends State<AuthScreen> {
                                 },
                               ),
                               const SizedBox(height: 20),
-                              if (_isAuthenticating) const CircularProgressIndicator(),
+                              if (_isAuthenticating)
+                                const CircularProgressIndicator(),
                               if (!_isAuthenticating)
                                 ElevatedButton(
                                   onPressed: _submit,
                                   style: ElevatedButton.styleFrom(
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 40),
-                                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12)),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14, horizontal: 40),
+                                    backgroundColor: Theme.of(context)
+                                        .colorScheme
+                                        .primaryContainer,
                                   ),
-                                  child: Text(_isLogin ? 'Login' : 'Signup', style: const TextStyle(fontSize: 16)),
+                                  child: Text(_isLogin ? 'Login' : 'Signup',
+                                      style: const TextStyle(fontSize: 16)),
                                 ),
                               const SizedBox(height: 12),
                               if (!_isAuthenticating)
@@ -170,10 +188,13 @@ class _AuthScreenState extends State<AuthScreen> {
                                   onPressed: () {
                                     Navigator.push(
                                       context,
-                                      MaterialPageRoute(builder: (context) => ResetPasswordScreen()),
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              ResetPasswordScreen()),
                                     );
                                   },
-                                  child: const Text('Forgot Password?', style: TextStyle(color: Colors.blue)),
+                                  child: const Text('Forgot Password?',
+                                      style: TextStyle(color: Colors.blue)),
                                 ),
                               const SizedBox(height: 12),
                               if (!_isAuthenticating)
