@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Service class for managing trips
 class TripService {
@@ -129,5 +130,146 @@ class TripService {
     batch.update(tripsRef.doc(tripId), {'isActive': isActive});
 
     await batch.commit();
+  }
+}
+
+final dateFoldersProvider = StateNotifierProvider.family<DateFoldersNotifier, List<DateFolder>, String>((ref, tripId) {
+  return DateFoldersNotifier(tripId);
+});
+
+// Model class for date folders
+class DateFolder {
+  String id;
+  String title;
+  List<DateTime> dates;
+  
+  DateFolder({
+    required this.id,
+    required this.title,
+    required this.dates,
+  });
+  
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'dates': dates.map((date) => date.toIso8601String()).toList(),
+    };
+  }
+  
+  factory DateFolder.fromMap(Map<String, dynamic> map) {
+    return DateFolder(
+      id: map['id'],
+      title: map['title'],
+      dates: (map['dates'] as List)
+          .map((dateStr) => DateTime.parse(dateStr))
+          .toList(),
+    );
+  }
+}
+
+class DateFoldersNotifier extends StateNotifier<List<DateFolder>> {
+  final String tripId;
+  
+  DateFoldersNotifier(this.tripId) : super([]) {
+    _loadFolders();
+  }
+
+  Future<void> _loadFolders() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('trips')
+          .doc(tripId)
+          .get();
+
+      if (doc.exists && doc.data()?['folders'] != null) {
+        final folders = (doc.data()?['folders'] as List)
+            .map((folder) => DateFolder.fromMap(folder))
+            .toList();
+        state = folders;
+      }
+    } catch (e) {
+      print('Error loading folders: $e');
+    }
+  }
+
+  Future<void> _saveFolders() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('trips')
+          .doc(tripId)
+          .set({
+        'folders': state.map((folder) => folder.toMap()).toList(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      print('Error saving folders: $e');
+    }
+  }
+
+  void addFolder(String title) {
+    final newFolder = DateFolder(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: title,
+      dates: [],
+    );
+    state = [...state, newFolder];
+    _saveFolders();
+  }
+
+  void removeFolder(String folderId) {
+    state = state.where((folder) => folder.id != folderId).toList();
+    _saveFolders();
+  }
+
+  void addDateToFolder(String folderId, DateTime date) {
+    state = state.map((folder) {
+      if (folder.id == folderId && !folder.dates.contains(date)) {
+        return DateFolder(
+          id: folder.id,
+          title: folder.title,
+          dates: [...folder.dates, date],
+        );
+      }
+      return folder;
+    }).toList();
+    _saveFolders();
+  }
+
+  void removeDateFromFolder(String folderId, DateTime date) {
+    state = state.map((folder) {
+      if (folder.id == folderId) {
+        return DateFolder(
+          id: folder.id,
+          title: folder.title,
+          dates: folder.dates.where((d) => d != date).toList(),
+        );
+      }
+      return folder;
+    }).toList();
+    _saveFolders();
+  }
+
+  void updateFolderTitle(String folderId, String newTitle) {
+    state = state.map((folder) {
+      if (folder.id == folderId) {
+        return DateFolder(
+          id: folder.id,
+          title: newTitle,
+          dates: folder.dates,
+        );
+      }
+      return folder;
+    }).toList();
+    _saveFolders();
   }
 }
