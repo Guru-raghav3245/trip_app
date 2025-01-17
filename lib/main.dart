@@ -6,7 +6,6 @@ import 'package:trip_app/screens/auth_screen/auth_screen.dart';
 import 'package:trip_app/screens/trip_list_screen/trip_list_page.dart';
 import 'services/firebase_options.dart';
 
-// Root function
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -18,7 +17,6 @@ void main() async {
   );
 }
 
-// App widget
 class App extends StatelessWidget {
   const App({super.key});
 
@@ -26,22 +24,59 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-        routes: {
-          '/auth': (context) => AuthScreen(),
-        },
-        title: 'Trip Planner',
-        theme: ThemeData().copyWith(
-          colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color.fromARGB(255, 63, 17, 177)),
+      routes: {
+        '/auth': (context) => AuthScreen(),
+      },
+      title: 'Trip Planner',
+      theme: ThemeData().copyWith(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color.fromARGB(255, 63, 17, 177),
         ),
-        home: StreamBuilder(
-            stream: FirebaseAuth.instance.authStateChanges(),
-            builder: (ctx, snapshot) {
-              if (snapshot.hasData) {
-                return TripListPage();
-              }
+      ),
+      home: const SplashScreen(),
+    );
+  }
+}
 
-              return const AuthScreen();
-            }));
+class SplashScreen extends StatelessWidget {
+  const SplashScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        } else if (snapshot.hasError) {
+          return const Scaffold(
+            body: Center(
+              child: Text('Something went wrong!'),
+            ),
+          );
+        } else {
+          return StreamBuilder(
+            stream: FirebaseAuth.instance.authStateChanges(),
+            builder: (ctx, userSnapshot) {
+              if (userSnapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              } else if (userSnapshot.hasData) {
+                return TripListPage();
+              } else {
+                return const AuthScreen();
+              }
+            },
+          );
+        }
+      },
+    );
   }
 }

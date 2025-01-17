@@ -20,6 +20,7 @@ class _AuthScreenState extends State<AuthScreen> {
   var _enteredEmail = '';
   var _enteredPassword = '';
   var _isAuthenticating = false;
+  var _passwordVisible = false; // New variable to control password visibility
 
   void _submit() async {
     final isValid = _form.currentState!.validate();
@@ -83,12 +84,11 @@ class _AuthScreenState extends State<AuthScreen> {
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
                   children: [
-                    // Add Logo or App Name here
                     const Icon(Icons.account_circle, size: 100, color: Colors.white),
                     const SizedBox(height: 20),
                     Text(
                       _isLogin ? 'Login to Your Account' : 'Create a New Account',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -106,7 +106,6 @@ class _AuthScreenState extends State<AuthScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Email field with Icon
                               TextFormField(
                                 decoration: const InputDecoration(
                                   labelText: 'Email Address',
@@ -126,14 +125,23 @@ class _AuthScreenState extends State<AuthScreen> {
                                 },
                               ),
                               const SizedBox(height: 12),
-                              // Password field with Icon
                               TextFormField(
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   labelText: 'Password',
-                                  prefixIcon: Icon(Icons.lock),
-                                  border: OutlineInputBorder(),
+                                  prefixIcon: const Icon(Icons.lock),
+                                  border: const OutlineInputBorder(),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _passwordVisible ? Icons.visibility : Icons.visibility_off,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _passwordVisible = !_passwordVisible;
+                                      });
+                                    },
+                                  ),
                                 ),
-                                obscureText: true,
+                                obscureText: !_passwordVisible,
                                 validator: (value) {
                                   if (value == null || value.trim().length < 6) {
                                     return 'Password must be at least 6 characters long.';
@@ -145,7 +153,6 @@ class _AuthScreenState extends State<AuthScreen> {
                                 },
                               ),
                               const SizedBox(height: 20),
-                              // Show loading spinner during authentication
                               if (_isAuthenticating) const CircularProgressIndicator(),
                               if (!_isAuthenticating)
                                 ElevatedButton(
@@ -155,10 +162,9 @@ class _AuthScreenState extends State<AuthScreen> {
                                     padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 40),
                                     backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                                   ),
-                                  child: Text(_isLogin ? 'Login' : 'Signup', style: TextStyle(fontSize: 16)),
+                                  child: Text(_isLogin ? 'Login' : 'Signup', style: const TextStyle(fontSize: 16)),
                                 ),
                               const SizedBox(height: 12),
-                              // Forgot password button
                               if (!_isAuthenticating)
                                 TextButton(
                                   onPressed: () {
@@ -170,7 +176,6 @@ class _AuthScreenState extends State<AuthScreen> {
                                   child: const Text('Forgot Password?', style: TextStyle(color: Colors.blue)),
                                 ),
                               const SizedBox(height: 12),
-                              // Toggle between Login and Signup
                               if (!_isAuthenticating)
                                 TextButton(
                                   onPressed: () {
@@ -182,7 +187,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                   },
                                   child: Text(
                                     _isLogin ? 'Create an Account' : 'Login',
-                                    style: TextStyle(color: Colors.blue),
+                                    style: const TextStyle(color: Colors.blue),
                                   ),
                                 ),
                             ],
