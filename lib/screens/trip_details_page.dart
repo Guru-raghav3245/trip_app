@@ -8,6 +8,7 @@ import 'dart:io';
 import 'full_image_viewer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:trip_app/services/trip_service.dart';
+import 'package:trip_app/screens/add_trip_content_screen.dart';
 
 // Trip Details Page.
 class TripDetailsPage extends ConsumerStatefulWidget {
@@ -252,6 +253,28 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
             ),
           ),
         ],
+      ),
+        floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+
+          final startDate = (widget.trip['startDate'] as Timestamp).toDate();
+          final endDate = (widget.trip['endDate'] as Timestamp).toDate();
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AddTripContentScreen(
+                tripId: widget.trip['id'],
+                initialDate: DateTime.now(),
+                startDate: startDate,    // Pass trip start date
+                endDate: endDate,
+              ),
+            ),
+          );
+        },
+        label: Text('Add Content'),
+        icon: Icon(Icons.add),
+        backgroundColor: Colors.indigoAccent,
       ),
     );
   }
