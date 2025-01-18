@@ -170,14 +170,22 @@ class ImagesNotifier extends StateNotifier<Map<DateTime, List<String>>> {
 
   // Add an image to the state
   void addImage(DateTime date, String imagePath) {
-    final images = state[date] ?? [];
-    state = {...state, date: [...images, imagePath]};
+    final dateKey = DateTime(date.year, date.month, date.day);
+    final images = state[dateKey] ?? [];
+    state = {
+      ...state,
+      dateKey: [...images, imagePath]
+    };
   }
 
-  // Remove an image from the state
   void removeImage(DateTime date, String imagePath) {
-    final images = state[date] ?? [];
-    images.remove(imagePath);
-    state = {...state, date: images};
+    final dateKey = DateTime(date.year, date.month, date.day);
+    final images = state[dateKey] ?? [];
+    if (images.contains(imagePath)) {
+      state = {
+        ...state,
+        dateKey: images.where((path) => path != imagePath).toList(),
+      };
+    }
   }
 }

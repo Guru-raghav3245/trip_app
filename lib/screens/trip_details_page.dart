@@ -129,8 +129,14 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
 
     if (pickedFile != null) {
-      final imageFile = File(pickedFile.path);
-      ref.read(imagesProvider(tripId).notifier).addImage(date, imageFile.path);
+      // Add image to the provider immediately
+      ref.read(imagesProvider(tripId).notifier).addImage(
+            date,
+            pickedFile.path,
+          );
+
+      // Update the UI state if needed
+      setState(() {});
     }
   }
 
@@ -140,8 +146,14 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
-      final imageFile = File(pickedFile.path);
-      ref.read(imagesProvider(tripId).notifier).addImage(date, imageFile.path);
+      // Add image to the provider immediately
+      ref.read(imagesProvider(tripId).notifier).addImage(
+            date,
+            pickedFile.path,
+          );
+
+      // Update the UI state if needed
+      setState(() {});
     }
   }
 
@@ -254,9 +266,8 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
           ),
         ],
       ),
-        floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-
           final startDate = (widget.trip['startDate'] as Timestamp).toDate();
           final endDate = (widget.trip['endDate'] as Timestamp).toDate();
 
@@ -266,7 +277,7 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
               builder: (context) => AddTripContentScreen(
                 tripId: widget.trip['id'],
                 initialDate: DateTime.now(),
-                startDate: startDate,    // Pass trip start date
+                startDate: startDate, // Pass trip start date
                 endDate: endDate,
               ),
             ),
@@ -449,9 +460,6 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
                   ),
                 ],
               ),
-              // In the _buildExpensesSection method of TripDetailsPage, update the Images Section:
-// Replace the existing image display code with this:
-
               if ((imagePathsProvider[date] ?? []).isNotEmpty)
                 SizedBox(
                   height: 100,
@@ -534,27 +542,58 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              TextField(
-                controller: noteController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: 'Add a note for this day...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: noteController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText: 'Add a note for this day...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                onSubmitted: (value) {
-                  // Update the note for the specific date in Riverpod state
-                  ref
-                      .read(notesProvider(tripId).notifier)
-                      .updateNote(date, value);
-                },
+                  IconButton(
+                    icon: const Icon(Icons.add_circle, color: Colors.green),
+                    onPressed: () {
+                      if (noteController.text.isNotEmpty) {
+                        // Get existing notes for the date
+                        final existingNotes = notes[date] ?? '';
+
+                        // Combine existing notes with new note
+                        final combinedNotes = existingNotes.isNotEmpty
+                            ? '$existingNotes\n${noteController.text}'
+                            : noteController.text;
+
+                        // Update note in Riverpod state
+                        ref.read(notesProvider(tripId).notifier).updateNote(
+                              date,
+                              combinedNotes,
+                            );
+
+                        // Clear the input field
+                        noteController.clear();
+                      }
+                    },
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               if (notes[date] != null && notes[date]!.isNotEmpty)
-                Text(
-                  notes[date]!,
-                  style: const TextStyle(fontSize: 14, color: Colors.black87),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    notes[date]!,
+                    style: const TextStyle(fontSize: 14, color: Colors.black87),
+                  ),
                 ),
             ],
           ),
