@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:trip_app/screens/trip_details_page.dart';
+import 'package:trip_app/screens/trip_details_screen/trip_details_page.dart';
 import 'package:trip_app/screens/trip_list_screen/collaborators_dialog.dart';
 
 class TripCard extends StatelessWidget {

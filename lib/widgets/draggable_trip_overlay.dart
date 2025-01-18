@@ -1,6 +1,6 @@
 // draggable_trip_overlay.dart
 import 'package:flutter/material.dart';
-import 'package:trip_app/screens/trip_details_page.dart';
+import 'package:trip_app/screens/trip_details_screen/trip_details_page.dart';
 
 class DraggableTripOverlay extends StatefulWidget {
   final Map<String, dynamic> trip;

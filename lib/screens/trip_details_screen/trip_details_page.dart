@@ -3,12 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:currency_picker/currency_picker.dart';
 import 'package:trip_app/services/riverpod_providers.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
-import 'full_image_viewer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:trip_app/services/trip_service.dart';
-import 'package:trip_app/screens/add_trip_content_screen.dart';
+import 'package:trip_app/screens/trip_details_screen/add_trip_content_screen.dart';
+import 'expenses_section.dart';
 
 // Trip Details Page.
 class TripDetailsPage extends ConsumerStatefulWidget {
@@ -103,58 +101,6 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
         ref.read(currencyProvider.notifier).updateCurrency(currency.symbol);
       },
     );
-  }
-
-  // Add an expense
-  void _addExpense(DateTime date, String tripId) {
-    if (expenseNameController.text.isNotEmpty &&
-        double.tryParse(expenseAmountController.text) != null) {
-      final expense = {
-        'name': expenseNameController.text,
-        'amount': double.parse(expenseAmountController.text),
-      };
-
-      // Use the Riverpod provider to add expense
-      ref.read(expensesProvider(tripId).notifier).addExpense(date, expense);
-
-      // Clear input fields after adding expense
-      expenseNameController.clear();
-      expenseAmountController.clear();
-    }
-  }
-
-  // Capture an image
-  Future<void> _captureImage(DateTime date, String tripId) async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.camera);
-
-    if (pickedFile != null) {
-      // Add image to the provider immediately
-      ref.read(imagesProvider(tripId).notifier).addImage(
-            date,
-            pickedFile.path,
-          );
-
-      // Update the UI state if needed
-      setState(() {});
-    }
-  }
-
-  // Select an image from the gallery
-  Future<void> _selectFromGallery(DateTime date, String tripId) async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      // Add image to the provider immediately
-      ref.read(imagesProvider(tripId).notifier).addImage(
-            date,
-            pickedFile.path,
-          );
-
-      // Update the UI state if needed
-      setState(() {});
-    }
   }
 
   List<DateTime> _getFilteredDates() {
@@ -345,258 +291,9 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
             ),
           ),
           if (isExpanded)
-            _buildExpensesSection(date, expenses, notes, currency, tripId),
-        ],
-      ),
-    );
-  }
-
-  // Build the expenses section
-  Widget _buildExpensesSection(
-      DateTime date,
-      Map<DateTime, List<Map<String, dynamic>>> expenses,
-      Map<DateTime, String> notes,
-      String currency,
-      String tripId) {
-    final imagePathsProvider =
-        ref.watch(imagesProvider(tripId)); // Add image paths provider
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Divider(color: Colors.grey[300]),
-          if ((expenses[date] ?? []).isNotEmpty)
-            ...(expenses[date] ?? []).map((expense) => ListTile(
-                  leading: const Icon(Icons.shopping_bag, color: Colors.indigo),
-                  title: Text(
-                    expense['name'],
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '$currency${expense['amount'].toStringAsFixed(2)}',
-                        style: const TextStyle(fontSize: 14, color: Colors.red),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          ref
-                              .read(expensesProvider(tripId).notifier)
-                              .removeExpense(date, expense);
-                        },
-                      ),
-                    ],
-                  ),
-                )),
-          const SizedBox(height: 8),
-
-          // Add Expense Section
-          Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.0),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: expenseNameController,
-                      decoration: InputDecoration(
-                        hintText: 'Expense Name',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: expenseAmountController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        hintText: 'Amount',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0),
-                        ),
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.add_circle, color: Colors.green),
-                    onPressed: () => _addExpense(date, tripId),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          // Images Section
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Photos:',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.camera, color: Colors.indigo),
-                    onPressed: () => _captureImage(date, tripId),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.photo_library, color: Colors.indigo),
-                    onPressed: () => _selectFromGallery(date, tripId),
-                  ),
-                ],
-              ),
-              if ((imagePathsProvider[date] ?? []).isNotEmpty)
-                SizedBox(
-                  height: 100,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: (imagePathsProvider[date] ?? []).map((imagePath) {
-                      return Padding(
-                        padding: const EdgeInsets.all(4.0),
-                        child: Stack(
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => FullScreenImageViewer(
-                                      imagePath: imagePath,
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: Hero(
-                                tag: imagePath,
-                                child: Container(
-                                  width: 100,
-                                  height: 100,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    border:
-                                        Border.all(color: Colors.grey.shade300),
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.file(
-                                      File(imagePath),
-                                      width: 100,
-                                      height: 100,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              top: 5,
-                              right: 5,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.5),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: IconButton(
-                                  icon: const Icon(Icons.delete,
-                                      color: Colors.white, size: 20),
-                                  onPressed: () {
-                                    ref
-                                        .read(imagesProvider(tripId).notifier)
-                                        .removeImage(date, imagePath);
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-            ],
-          ),
-
-          const SizedBox(height: 8),
-
-          // Notes Section
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Notes:',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: noteController,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        hintText: 'Add a note for this day...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.0),
-                        ),
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.add_circle, color: Colors.green),
-                    onPressed: () {
-                      if (noteController.text.isNotEmpty) {
-                        // Get existing notes for the date
-                        final existingNotes = notes[date] ?? '';
-
-                        // Combine existing notes with new note
-                        final combinedNotes = existingNotes.isNotEmpty
-                            ? '$existingNotes\n${noteController.text}'
-                            : noteController.text;
-
-                        // Update note in Riverpod state
-                        ref.read(notesProvider(tripId).notifier).updateNote(
-                              date,
-                              combinedNotes,
-                            );
-
-                        // Clear the input field
-                        noteController.clear();
-                      }
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (notes[date] != null && notes[date]!.isNotEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    notes[date]!,
-                    style: const TextStyle(fontSize: 14, color: Colors.black87),
-                  ),
-                ),
-            ],
-          ),
+            ExpensesSection(date: date, expenses: expenses, notes: notes, currency: currency, tripId: tripId, expenseNameController: expenseNameController,
+  expenseAmountController: expenseAmountController,
+  noteController: noteController,),
         ],
       ),
     );
@@ -651,7 +348,7 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
                   ),
                   Text('${folder.dates.length} dates'),
                   if (isSelected && folder.dates.isNotEmpty)
-                    Container(
+                    SizedBox(
                       height: 100,
                       child: ListView.builder(
                         itemCount: folder.dates.length,
@@ -698,7 +395,7 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
-        Container(
+        SizedBox(
           height: 200, // Increased height to show more content
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
