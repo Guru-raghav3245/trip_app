@@ -556,16 +556,20 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
             margin: EdgeInsets.all(8),
             color: isSelected ? Colors.indigo[100] : null,
             child: Container(
-              width: 150,
+              width: 200, // Increased width to accommodate dates
               padding: EdgeInsets.all(8),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        folder.title,
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      Expanded(
+                        child: Text(
+                          folder.title,
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       IconButton(
                         icon: Icon(Icons.delete, size: 20),
@@ -584,6 +588,31 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
                     ],
                   ),
                   Text('${folder.dates.length} dates'),
+                  if (isSelected && folder.dates.isNotEmpty)
+                    Container(
+                      height: 100,
+                      child: ListView.builder(
+                        itemCount: folder.dates.length,
+                        itemBuilder: (context, index) {
+                          final date = folder.dates[index];
+                          return ListTile(
+                            dense: true,
+                            title: Text(
+                              DateFormat('MMM d, y').format(date),
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            trailing: IconButton(
+                              icon: Icon(Icons.close, size: 16),
+                              onPressed: () {
+                                ref
+                                    .read(dateFoldersProvider(tripId).notifier)
+                                    .removeDateFromFolder(folder.id, date);
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -593,18 +622,30 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
     );
   }
 
-  // Update the folders section in the build method
+// Update the _buildFoldersSection to allow scrolling and show all folders:
   Widget _buildFoldersSection(List<DateFolder> folders, String tripId) {
     if (folders.isEmpty) return SizedBox.shrink();
 
-    return Container(
-      height: 100,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: folders.length,
-        itemBuilder: (context, index) =>
-            _buildFolderCard(folders[index], tripId),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Text(
+            'Folders',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ),
+        Container(
+          height: 200, // Increased height to show more content
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: folders.length,
+            itemBuilder: (context, index) =>
+                _buildFolderCard(folders[index], tripId),
+          ),
+        ),
+      ],
     );
   }
 }

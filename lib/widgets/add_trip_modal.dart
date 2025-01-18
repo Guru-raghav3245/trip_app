@@ -6,7 +6,7 @@ class AddTripModal extends StatefulWidget {
   const AddTripModal({super.key});
 
   @override
-  _AddTripModalState createState() => _AddTripModalState();
+  State<AddTripModal> createState() => _AddTripModalState();
 }
 
 class _AddTripModalState extends State<AddTripModal> {

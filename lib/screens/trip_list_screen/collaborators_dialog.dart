@@ -9,11 +9,11 @@ class ManageCollaboratorsDialog extends StatefulWidget {
   final Function(List<String>) onCollaboratorsUpdated;
 
   const ManageCollaboratorsDialog({
-    Key? key,
+    super.key,
     required this.tripId,
     required this.collaborators,
     required this.onCollaboratorsUpdated,
-  }) : super(key: key);
+  });
 
   @override
   State<ManageCollaboratorsDialog> createState() => _ManageCollaboratorsDialogState();
@@ -113,24 +113,5 @@ class _ManageCollaboratorsDialogState extends State<ManageCollaboratorsDialog> {
         ),
       ),
     );
-  }
-}
-
-// In trip_service.dart, add this method:
-Future<void> removeCollaborator(String tripId, String email) async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
-
-  try {
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('trips')
-        .doc(tripId)
-        .update({
-      'owners': FieldValue.arrayRemove([email])
-    });
-  } catch (e) {
-    throw Exception('Error removing collaborator: $e');
   }
 }
