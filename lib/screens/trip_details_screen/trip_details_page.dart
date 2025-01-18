@@ -189,25 +189,33 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
             ),
           ),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              children: _getFilteredDates().map((date) {
-                return Draggable<DateTime>(
-                  data: date,
-                  feedback: Material(
-                    child: Container(
-                      padding: EdgeInsets.all(8),
-                      color: Colors.indigo.withOpacity(0.5),
-                      child: Text(
-                        DateFormat.yMMMd().format(date),
-                        style: TextStyle(color: Colors.white),
+            child: Scrollbar(
+              thumbVisibility: true, // Makes the scrollbar always visible
+              thickness: 8.0, // Adjust the width of the scrollbar
+              radius: Radius.circular(16.0), // Make the scrollbar rounded
+              trackVisibility: true, // Show the scrollbar track
+              interactive:
+                  true, // Allows clicking on the scrollbar for interaction
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                children: _getFilteredDates().map((date) {
+                  return Draggable<DateTime>(
+                    data: date,
+                    feedback: Material(
+                      child: Container(
+                        padding: EdgeInsets.all(8),
+                        color: Colors.indigo.withOpacity(0.5),
+                        child: Text(
+                          DateFormat.yMMMd().format(date),
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ),
-                  ),
-                  child:
-                      _buildDateTile(date, expenses, notes, currency, tripId),
-                );
-              }).toList(),
+                    child:
+                        _buildDateTile(date, expenses, notes, currency, tripId),
+                  );
+                }).toList(),
+              ),
             ),
           ),
         ],
@@ -291,9 +299,16 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
             ),
           ),
           if (isExpanded)
-            ExpensesSection(date: date, expenses: expenses, notes: notes, currency: currency, tripId: tripId, expenseNameController: expenseNameController,
-  expenseAmountController: expenseAmountController,
-  noteController: noteController,),
+            ExpensesSection(
+              date: date,
+              expenses: expenses,
+              notes: notes,
+              currency: currency,
+              tripId: tripId,
+              expenseNameController: expenseNameController,
+              expenseAmountController: expenseAmountController,
+              noteController: noteController,
+            ),
         ],
       ),
     );
