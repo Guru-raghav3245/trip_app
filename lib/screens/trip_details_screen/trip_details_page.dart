@@ -315,86 +315,132 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
   }
 
   Widget _buildFolderCard(DateFolder folder, String tripId) {
-    final isSelected = selectedFolderId == folder.id;
+  final isSelected = selectedFolderId == folder.id;
 
-    return DragTarget<DateTime>(
-      onAccept: (date) {
-        ref
-            .read(dateFoldersProvider(tripId).notifier)
-            .addDateToFolder(folder.id, date);
-      },
-      builder: (context, candidateData, rejectedData) {
-        return GestureDetector(
-          onTap: () => _toggleFolderSelection(folder.id),
-          child: Card(
-            margin: EdgeInsets.all(8),
-            color: isSelected ? Colors.indigo[100] : null,
-            child: Container(
-              width: 200, // Increased width to accommodate dates
-              padding: EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          folder.title,
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
+  return DragTarget<DateTime>(
+    onAccept: (date) {
+      ref
+          .read(dateFoldersProvider(tripId).notifier)
+          .addDateToFolder(folder.id, date);
+    },
+    builder: (context, candidateData, rejectedData) {
+      return GestureDetector(
+        onTap: () => _toggleFolderSelection(folder.id),
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          padding: EdgeInsets.all(6), // Reduced padding
+          margin: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.indigo[100] : Colors.white,
+            borderRadius: BorderRadius.circular(8.0),
+            border: Border.all(
+              color: isSelected ? Colors.indigoAccent : Colors.grey.shade300,
+              width: isSelected ? 2 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: isSelected ? 6 : 3,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          constraints: BoxConstraints(
+            maxWidth: 120, // Set width to 120 for compactness
+            maxHeight: 140, // Increased height to fit the larger ListView
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(6), // Further reduced padding inside card
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Folder title and delete icon
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        folder.title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12, // Smaller font size
+                          color: Colors.indigo.shade700,
                         ),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete, size: 20),
-                        onPressed: () {
-                          if (selectedFolderId == folder.id) {
-                            setState(() {
-                              selectedFolderId = null;
-                              showingAllDates = true;
-                            });
-                          }
-                          ref
-                              .read(dateFoldersProvider(tripId).notifier)
-                              .removeFolder(folder.id);
-                        },
-                      ),
-                    ],
-                  ),
-                  Text('${folder.dates.length} dates'),
-                  if (isSelected && folder.dates.isNotEmpty)
-                    SizedBox(
-                      height: 100,
-                      child: ListView.builder(
-                        itemCount: folder.dates.length,
-                        itemBuilder: (context, index) {
-                          final date = folder.dates[index];
-                          return ListTile(
-                            dense: true,
-                            title: Text(
-                              DateFormat('MMM d, y').format(date),
-                              style: TextStyle(fontSize: 12),
-                            ),
-                            trailing: IconButton(
-                              icon: Icon(Icons.close, size: 16),
-                              onPressed: () {
-                                ref
-                                    .read(dateFoldersProvider(tripId).notifier)
-                                    .removeDateFromFolder(folder.id, date);
-                              },
-                            ),
-                          );
-                        },
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                ],
-              ),
+                    IconButton(
+                      icon: Icon(Icons.delete, color: Colors.redAccent, size: 18),
+                      onPressed: () {
+                        if (selectedFolderId == folder.id) {
+                          setState(() {
+                            selectedFolderId = null;
+                            showingAllDates = true;
+                          });
+                        }
+                        ref
+                            .read(dateFoldersProvider(tripId).notifier)
+                            .removeFolder(folder.id);
+                      },
+                      tooltip: 'Delete Folder',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4), // Reduced spacing
+                // Folder details (number of dates)
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${folder.dates.length} dates',
+                      style: TextStyle(fontSize: 10, color: Colors.grey.shade700),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4), // Reduced spacing
+                // Dates list within the folder (only show if selected and has dates)
+                if (folder.dates.isNotEmpty)
+                  Container(
+                    height: 125, // Increased height for the dates list
+                    decoration: BoxDecoration(
+                      color: Colors.indigo[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(4.0),
+                      itemCount: folder.dates.length,
+                      itemBuilder: (context, index) {
+                        final date = folder.dates[index];
+                        return ListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            DateFormat('MMM d, y').format(date),
+                            style: TextStyle(fontSize: 10), // Smaller font size
+                          ),
+                          trailing: IconButton(
+                            icon: Icon(Icons.close, size: 14, color: Colors.redAccent),
+                            onPressed: () {
+                              ref
+                                  .read(dateFoldersProvider(tripId).notifier)
+                                  .removeDateFromFolder(folder.id, date);
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
+
 
 // Update the _buildFoldersSection to allow scrolling and show all folders:
   Widget _buildFoldersSection(List<DateFolder> folders, String tripId) {
@@ -407,11 +453,14 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
           padding: const EdgeInsets.symmetric(vertical: 8.0),
           child: Text(
             'Folders',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.indigo),
           ),
         ),
         SizedBox(
-          height: 200, // Increased height to show more content
+          height: 240, // Adjusted to give a compact scrollable area
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: folders.length,
