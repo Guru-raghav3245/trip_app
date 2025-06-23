@@ -8,7 +8,6 @@ import 'package:trip_app/services/trip_service.dart';
 import 'package:trip_app/screens/trip_details_screen/add_trip_content_screen.dart';
 import 'expenses_section.dart';
 
-// Trip Details Page.
 class TripDetailsPage extends ConsumerStatefulWidget {
   final Map<String, dynamic> trip;
 
@@ -21,6 +20,7 @@ class TripDetailsPage extends ConsumerStatefulWidget {
 class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
   late List<DateTime> tripDates;
   Set<DateTime> expandedDates = {};
+  final ScrollController _scrollController = ScrollController();
 
   final TextEditingController expenseNameController = TextEditingController();
   final TextEditingController expenseAmountController = TextEditingController();
@@ -48,23 +48,29 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
     );
   }
 
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   void _showCreateFolderDialog() {
     final TextEditingController titleController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Create New Folder'),
+        title: const Text('Create New Folder'),
         content: TextField(
           controller: titleController,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             hintText: 'Enter folder name',
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
@@ -75,14 +81,13 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
                 Navigator.pop(context);
               }
             },
-            child: Text('Create'),
+            child: const Text('Create'),
           ),
         ],
       ),
     );
   }
 
-  // Calculate the total expenses for a specific date
   double _calculateTotalExpenses(
       DateTime date, Map<DateTime, List<Map<String, dynamic>>> expenses) {
     return expenses[date]
@@ -90,7 +95,6 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
         0.0;
   }
 
-  // Show the currency selector
   void _showCurrencySelector(String selectedCurrency) {
     showCurrencyPicker(
       context: context,
@@ -120,20 +124,22 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
   void _toggleFolderSelection(String folderId) {
     setState(() {
       if (selectedFolderId == folderId) {
-        // If clicking the same folder again, show all dates
         selectedFolderId = null;
         showingAllDates = true;
       } else {
-        // If clicking a different folder, show only folder dates
         selectedFolderId = folderId;
         showingAllDates = false;
       }
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // Use the trip ID to create trip-specific providers
     final tripId = widget.trip['id'];
     final expenses = ref.watch(expensesProvider(tripId));
     final notes = ref.watch(notesProvider(tripId));
@@ -149,18 +155,17 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
         backgroundColor: Colors.indigoAccent,
         actions: [
           IconButton(
-            icon: Icon(Icons.currency_exchange),
+            icon: const Icon(Icons.currency_exchange),
             onPressed: () => _showCurrencySelector(currency),
           ),
           IconButton(
-            icon: Icon(Icons.create_new_folder),
+            icon: const Icon(Icons.create_new_folder),
             onPressed: _showCreateFolderDialog,
           ),
         ],
       ),
       body: Column(
         children: [
-          // Header Section
           Card(
             margin: const EdgeInsets.all(16.0),
             color: Colors.indigo[50],
@@ -183,39 +188,27 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
                     '${DateFormat.yMMMd().format(widget.trip['endDate'])}',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                  if (folders.isNotEmpty) _buildFoldersSection(folders, tripId),
+                  if (folders.isNotEmpty)
+                    _buildFoldersSection(folders, tripId),
                 ],
               ),
             ),
           ),
           Expanded(
-            child: Scrollbar(
-              thumbVisibility: true, // Makes the scrollbar always visible
-              thickness: 8.0, // Adjust the width of the scrollbar
-              radius: Radius.circular(16.0), // Make the scrollbar rounded
-              trackVisibility: true, // Show the scrollbar track
-              interactive:
-                  true, // Allows clicking on the scrollbar for interaction
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                children: _getFilteredDates().map((date) {
-                  return Draggable<DateTime>(
-                    data: date,
-                    feedback: Material(
-                      child: Container(
-                        padding: EdgeInsets.all(8),
-                        color: Colors.indigo.withOpacity(0.5),
-                        child: Text(
-                          DateFormat.yMMMd().format(date),
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ),
-                    child:
-                        _buildDateTile(date, expenses, notes, currency, tripId),
-                  );
-                }).toList(),
-              ),
+            child: CustomScrollView(
+              controller: _scrollController,
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final date = _getFilteredDates()[index];
+                      return _buildDateTile(date, expenses, notes, currency, tripId);
+                    },
+                    childCount: _getFilteredDates().length,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -231,20 +224,19 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
               builder: (context) => AddTripContentScreen(
                 tripId: widget.trip['id'],
                 initialDate: DateTime.now(),
-                startDate: startDate, // Pass trip start date
+                startDate: startDate,
                 endDate: endDate,
               ),
             ),
           );
         },
-        label: Text('Add Content'),
-        icon: Icon(Icons.add),
+        label: const Text('Add Content'),
+        icon: const Icon(Icons.add),
         backgroundColor: Colors.indigoAccent,
       ),
     );
   }
 
-  // Build a date tile
   Widget _buildDateTile(
       DateTime date,
       Map<DateTime, List<Map<String, dynamic>>> expenses,
@@ -257,19 +249,20 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
     return Card(
       key: ValueKey(date),
       elevation: 3,
-      margin: const EdgeInsets.symmetric(vertical: 6),
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Column(
         children: [
           ListTile(
             title: Row(
               children: [
-                const Icon(Icons.calendar_today,
-                    size: 20, color: Colors.indigo),
+                const Icon(Icons.calendar_today, size: 20, color: Colors.indigo),
                 const SizedBox(width: 8),
                 Text(
                   DateFormat.yMMMd().format(date),
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -299,15 +292,18 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
             ),
           ),
           if (isExpanded)
-            ExpensesSection(
-              date: date,
-              expenses: expenses,
-              notes: notes,
-              currency: currency,
-              tripId: tripId,
-              expenseNameController: expenseNameController,
-              expenseAmountController: expenseAmountController,
-              noteController: noteController,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ExpensesSection(
+                date: date,
+                expenses: expenses,
+                notes: notes,
+                currency: currency,
+                tripId: tripId,
+                expenseNameController: expenseNameController,
+                expenseAmountController: expenseAmountController,
+                noteController: noteController,
+              ),
             ),
         ],
       ),
@@ -327,118 +323,81 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
         return GestureDetector(
           onTap: () => _toggleFolderSelection(folder.id),
           child: AnimatedContainer(
-            duration: Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
-            padding: EdgeInsets.all(6), // Reduced padding
-            margin: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(8),
+            margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             decoration: BoxDecoration(
-              color: isSelected ? Colors.indigo[100] : Colors.white,
-              borderRadius: BorderRadius.circular(8.0),
+              color: isSelected 
+                  ? Colors.indigo[100] 
+                  : candidateData.isNotEmpty 
+                      ? Colors.indigo[50] 
+                      : Colors.white,
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected ? Colors.indigoAccent : Colors.grey.shade300,
-                width: isSelected ? 2 : 1,
+                color: isSelected 
+                    ? Colors.indigoAccent 
+                    : candidateData.isNotEmpty
+                        ? Colors.indigo
+                        : Colors.grey.shade300,
+                width: isSelected || candidateData.isNotEmpty ? 2 : 1,
               ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),
-                  blurRadius: isSelected ? 6 : 3,
-                  offset: Offset(0, 2),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-            constraints: BoxConstraints(
-              maxWidth: 120, // Set width to 120 for compactness
-              maxHeight: 140, // Increased height to fit the larger ListView
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(
-                  6), // Further reduced padding inside card
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Folder title and delete icon
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          folder.title,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12, // Smaller font size
-                            color: Colors.indigo.shade700,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete,
-                            color: Colors.redAccent, size: 18),
-                        onPressed: () {
-                          if (selectedFolderId == folder.id) {
-                            setState(() {
-                              selectedFolderId = null;
-                              showingAllDates = true;
-                            });
-                          }
-                          ref
-                              .read(dateFoldersProvider(tripId).notifier)
-                              .removeFolder(folder.id);
-                        },
-                        tooltip: 'Delete Folder',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4), // Reduced spacing
-                  // Folder details (number of dates)
-                  Row(
-                    children: [
-                      Icon(Icons.calendar_today, size: 14, color: Colors.grey),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${folder.dates.length} dates',
+            width: 140,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        folder.title,
                         style: TextStyle(
-                            fontSize: 10, color: Colors.grey.shade700),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4), // Reduced spacing
-                  // Dates list within the folder (only show if selected and has dates)
-                  if (folder.dates.isNotEmpty)
-                    Container(
-                      height: 125, // Increased height for the dates list
-                      decoration: BoxDecoration(
-                        color: Colors.indigo[50],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(4.0),
-                        itemCount: folder.dates.length,
-                        itemBuilder: (context, index) {
-                          final date = folder.dates[index];
-                          return ListTile(
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              DateFormat('MMM d, y').format(date),
-                              style:
-                                  TextStyle(fontSize: 10), // Smaller font size
-                            ),
-                            trailing: IconButton(
-                              icon: Icon(Icons.close,
-                                  size: 14, color: Colors.redAccent),
-                              onPressed: () {
-                                ref
-                                    .read(dateFoldersProvider(tripId).notifier)
-                                    .removeDateFromFolder(folder.id, date);
-                              },
-                            ),
-                          );
-                        },
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Colors.indigo.shade800,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                ],
-              ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.redAccent, size: 18),
+                      onPressed: () {
+                        if (selectedFolderId == folder.id) {
+                          setState(() {
+                            selectedFolderId = null;
+                            showingAllDates = true;
+                          });
+                        }
+                        ref
+                            .read(dateFoldersProvider(tripId).notifier)
+                            .removeFolder(folder.id);
+                      },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${folder.dates.length} ${folder.dates.length == 1 ? 'date' : 'dates'}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         );
@@ -446,30 +405,26 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
     );
   }
 
-// Update the _buildFoldersSection to allow scrolling and show all folders:
   Widget _buildFoldersSection(List<DateFolder> folders, String tripId) {
-    if (folders.isEmpty) return SizedBox.shrink();
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
+        const Padding(
+          padding: EdgeInsets.only(top: 8, bottom: 4),
           child: Text(
             'Folders',
-            style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.indigo),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.indigo),
           ),
         ),
         SizedBox(
-          height: 240, // Adjusted to give a compact scrollable area
-          child: ListView.builder(
+          height: 80,
+          child: ListView.separated(
             scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: folders.length,
-            itemBuilder: (context, index) =>
-                _buildFolderCard(folders[index], tripId),
+            separatorBuilder: (context, index) => const SizedBox(width: 8),
+            itemBuilder: (context, index) => _buildFolderCard(folders[index], tripId),
           ),
         ),
       ],
