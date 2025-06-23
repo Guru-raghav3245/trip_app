@@ -29,9 +29,9 @@ class _AddTripContentScreenState extends ConsumerState<AddTripContentScreen> {
   final TextEditingController expenseNameController = TextEditingController();
   final TextEditingController expenseAmountController = TextEditingController();
   final TextEditingController noteController = TextEditingController();
-  List<String> newImagePaths = [];
+  List<String> savedImagePaths = [];
+  List<String> tempImagePaths = [];
 
-  // Track which sections are expanded
   Map<String, bool> expandedSections = {
     'date': true,
     'expense': false,
@@ -93,13 +93,26 @@ class _AddTripContentScreenState extends ConsumerState<AddTripContentScreen> {
 
     if (pickedFile != null) {
       setState(() {
-        newImagePaths.add(pickedFile.path);
+        tempImagePaths.add(pickedFile.path);
       });
+    }
+  }
 
-      ref.read(imagesProvider(widget.tripId).notifier).addImage(
-            selectedDate,
-            pickedFile.path,
-          );
+  void _saveImages() {
+    if (tempImagePaths.isNotEmpty) {
+      for (var path in tempImagePaths) {
+        ref.read(imagesProvider(widget.tripId).notifier).addImage(
+              selectedDate,
+              path,
+            );
+      }
+      setState(() {
+        savedImagePaths.addAll(tempImagePaths);
+        tempImagePaths.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Images saved successfully!')),
+      );
     }
   }
 
@@ -189,7 +202,7 @@ class _AddTripContentScreenState extends ConsumerState<AddTripContentScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Date Selection Card
+            // Date
             _buildAccordionCard(
               title: 'Select Date',
               sectionKey: 'date',
@@ -210,7 +223,7 @@ class _AddTripContentScreenState extends ConsumerState<AddTripContentScreen> {
               ),
             ),
 
-            // Expense Card
+            // Expense
             _buildAccordionCard(
               title: 'Add Expense',
               sectionKey: 'expense',
@@ -246,7 +259,7 @@ class _AddTripContentScreenState extends ConsumerState<AddTripContentScreen> {
               ),
             ),
 
-            // Images Card
+            // Images
             _buildAccordionCard(
               title: 'Add Images',
               sectionKey: 'images',
@@ -275,20 +288,20 @@ class _AddTripContentScreenState extends ConsumerState<AddTripContentScreen> {
                       ),
                     ],
                   ),
-                  if (newImagePaths.isNotEmpty) ...[
+                  if (tempImagePaths.isNotEmpty) ...[
                     SizedBox(height: 16),
                     Container(
                       height: 100,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
-                        itemCount: newImagePaths.length,
+                        itemCount: tempImagePaths.length,
                         itemBuilder: (context, index) {
                           return Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: Stack(
                               children: [
                                 Image.file(
-                                  File(newImagePaths[index]),
+                                  File(tempImagePaths[index]),
                                   width: 80,
                                   height: 80,
                                   fit: BoxFit.cover,
@@ -300,7 +313,7 @@ class _AddTripContentScreenState extends ConsumerState<AddTripContentScreen> {
                                     icon: Icon(Icons.close, color: Colors.red),
                                     onPressed: () {
                                       setState(() {
-                                        newImagePaths.removeAt(index);
+                                        tempImagePaths.removeAt(index);
                                       });
                                     },
                                   ),
@@ -311,12 +324,21 @@ class _AddTripContentScreenState extends ConsumerState<AddTripContentScreen> {
                         },
                       ),
                     ),
+                    SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _saveImages,
+                      icon: Icon(Icons.save),
+                      label: Text('Save Images'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.indigoAccent,
+                      ),
+                    ),
                   ],
                 ],
               ),
             ),
 
-            // Notes Card
+            // Notes
             _buildAccordionCard(
               title: 'Add Note',
               sectionKey: 'notes',
