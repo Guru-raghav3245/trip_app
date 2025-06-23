@@ -110,6 +110,13 @@ class _TripListPageState extends State<TripListPage> {
         trips = tripsData.docs.map((doc) {
           final data = doc.data();
           data['id'] = doc.id;
+          // Convert Timestamp to DateTime for startDate and endDate
+          data['startDate'] = data['startDate'] != null
+              ? (data['startDate'] as Timestamp).toDate()
+              : null;
+          data['endDate'] = data['endDate'] != null
+              ? (data['endDate'] as Timestamp).toDate()
+              : null;
           return data;
         }).toList();
         _isLoading = false;
@@ -170,53 +177,53 @@ class _TripListPageState extends State<TripListPage> {
 
   // Build the widget
   @override
-Widget build(BuildContext context) {
-  return Stack(
-    children: [
-      Scaffold(
-        appBar: AppBar(
-          title: const Text('Trip Planner',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          centerTitle: true,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.exit_to_app),
-              onPressed: _logOut,
-            ),
-          ],
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(
+            title: const Text('Trip Planner',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            centerTitle: true,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.exit_to_app),
+                onPressed: _logOut,
+              ),
+            ],
+          ),
+          body: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : trips.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                      itemCount: trips.length,
+                      padding: const EdgeInsets.all(8.0),
+                      itemBuilder: (context, index) {
+                        final trip = trips[index];
+                        return TripCard(
+                          trip: trip,
+                          onDelete: () => _deleteTrip(trip),
+                          onInvite: () => _inviteUser(trip['id']),
+                          onToggleActive: (isActive) =>
+                              _toggleTripActive(trip, isActive),
+                          onCollaboratorsUpdated: (updatedCollaborators) =>
+                              _handleCollaboratorsUpdated(
+                                  trip, updatedCollaborators),
+                        );
+                      },
+                    ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: _openAddTripModal,
+            tooltip: 'Add a new trip',
+            child: const Icon(Icons.add),
+          ),
         ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : trips.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    itemCount: trips.length,
-                    padding: const EdgeInsets.all(8.0),
-                    itemBuilder: (context, index) {
-                      final trip = trips[index];
-                      return TripCard(
-                        trip: trip,
-                        onDelete: () => _deleteTrip(trip),
-                        onInvite: () => _inviteUser(trip['id']),
-                        onToggleActive: (isActive) =>
-                            _toggleTripActive(trip, isActive),
-                        onCollaboratorsUpdated: (updatedCollaborators) =>
-                            _handleCollaboratorsUpdated(
-                                trip, updatedCollaborators),
-                      );
-                    },
-                  ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _openAddTripModal,
-          tooltip: 'Add a new trip',
-          child: const Icon(Icons.add),
-        ),
-      ),
-      if (activeTrip?.isNotEmpty == true)
-        DraggableTripOverlay(trip: activeTrip!),
-    ],
-  );
-}
+        if (activeTrip?.isNotEmpty == true)
+          DraggableTripOverlay(trip: activeTrip!),
+      ],
+    );
+  }
 
   // Empty state widget
   Widget _buildEmptyState() {

@@ -179,8 +179,8 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Duration: ${DateFormat.yMMMd().format(widget.trip['startDate'].toDate())} - '
-                    '${DateFormat.yMMMd().format(widget.trip['endDate'].toDate())}',
+                    'Duration: ${DateFormat.yMMMd().format(widget.trip['startDate'])} - '
+                    '${DateFormat.yMMMd().format(widget.trip['endDate'])}',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   if (folders.isNotEmpty) _buildFoldersSection(folders, tripId),
@@ -222,8 +222,8 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          final startDate = (widget.trip['startDate'] as Timestamp).toDate();
-          final endDate = (widget.trip['endDate'] as Timestamp).toDate();
+          final startDate = widget.trip['startDate'];
+          final endDate = widget.trip['endDate'];
 
           Navigator.push(
             context,
