@@ -4,9 +4,9 @@ import 'package:intl/intl.dart';
 import 'package:currency_picker/currency_picker.dart';
 import 'package:trip_app/services/riverpod_providers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:trip_app/services/trip_service.dart';
 import 'package:trip_app/screens/trip_details_screen/add_trip_content_screen.dart';
 import 'expenses_section.dart';
+import 'dart:math';
 
 class TripDetailsPage extends ConsumerStatefulWidget {
   final Map<String, dynamic> trip;
@@ -21,12 +21,15 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
   late List<DateTime> tripDates;
   Set<DateTime> expandedDates = {};
   final ScrollController _scrollController = ScrollController();
-
+  final TextEditingController _folderNameController = TextEditingController();
   final TextEditingController expenseNameController = TextEditingController();
   final TextEditingController expenseAmountController = TextEditingController();
   final TextEditingController noteController = TextEditingController();
-  String? selectedFolderId;
-  bool showingAllDates = true;
+
+  // Folder state
+  final Map<String, List<DateTime>> _folders = {};
+  DateTime? _draggedDate;
+  String? _draggedFromFolder;
 
   @override
   void initState() {
@@ -51,41 +54,8 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _folderNameController.dispose();
     super.dispose();
-  }
-
-  void _showCreateFolderDialog() {
-    final TextEditingController titleController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Create New Folder'),
-        content: TextField(
-          controller: titleController,
-          decoration: const InputDecoration(
-            hintText: 'Enter folder name',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              if (titleController.text.isNotEmpty) {
-                ref
-                    .read(dateFoldersProvider(widget.trip['id']).notifier)
-                    .addFolder(titleController.text);
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Create'),
-          ),
-        ],
-      ),
-    );
   }
 
   double _calculateTotalExpenses(
@@ -107,35 +77,315 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
     );
   }
 
-  List<DateTime> _getFilteredDates() {
-    if (showingAllDates || selectedFolderId == null) {
-      return tripDates;
-    }
-
-    final folders = ref.watch(dateFoldersProvider(widget.trip['id']));
-    final selectedFolder = folders.firstWhere(
-      (folder) => folder.id == selectedFolderId,
-      orElse: () => DateFolder(id: '', title: '', dates: []),
+  void _showCreateFolderDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Create New Folder'),
+          content: TextField(
+            controller: _folderNameController,
+            decoration: const InputDecoration(hintText: 'Folder name'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (_folderNameController.text.trim().isNotEmpty) {
+                  setState(() {
+                    _folders[_folderNameController.text.trim()] = [];
+                    _folderNameController.clear();
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Create'),
+            ),
+          ],
+        );
+      },
     );
-
-    return selectedFolder.dates;
   }
 
-  void _toggleFolderSelection(String folderId) {
+  void _showDeleteFolderDialog(String folderName) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete Folder'),
+          content: Text('Are you sure you want to delete "$folderName"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _folders.remove(folderName);
+                });
+                Navigator.pop(context);
+              },
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _onDragStarted(DateTime date, String? fromFolder) {
     setState(() {
-      if (selectedFolderId == folderId) {
-        selectedFolderId = null;
-        showingAllDates = true;
-      } else {
-        selectedFolderId = folderId;
-        showingAllDates = false;
-      }
-      _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      _draggedDate = date;
+      _draggedFromFolder = fromFolder;
     });
+  }
+
+  void _onDragEnded() {
+    setState(() {
+      _draggedDate = null;
+      _draggedFromFolder = null;
+    });
+  }
+
+  void _onFolderDropped(String folderName) {
+    if (_draggedDate == null) return;
+
+    setState(() {
+      // Remove from previous location
+      if (_draggedFromFolder != null) {
+        _folders[_draggedFromFolder]?.remove(_draggedDate);
+      } else {
+        tripDates.remove(_draggedDate);
+      }
+
+      // Add to new folder
+      _folders[folderName]?.add(_draggedDate!);
+      _draggedDate = null;
+      _draggedFromFolder = null;
+    });
+  }
+
+  void _onUnfolderDropped() {
+    if (_draggedDate == null || _draggedFromFolder == null) return;
+
+    setState(() {
+      _folders[_draggedFromFolder]?.remove(_draggedDate);
+      tripDates.add(_draggedDate!);
+      tripDates.sort();
+      _draggedDate = null;
+      _draggedFromFolder = null;
+    });
+  }
+
+  Widget _buildFolderSection() {
+    if (_folders.isEmpty) {
+      return Container();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Text(
+            'Folders',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+        ),
+        ..._folders.entries.map((entry) {
+          final folderName = entry.key;
+          final datesInFolder = entry.value;
+
+          return DragTarget<DateTime>(
+            onAccept: (date) => _onFolderDropped(folderName),
+            builder: (context, candidateData, rejectedData) {
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.folder, color: Colors.amber),
+                      title: Text(folderName),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('${datesInFolder.length} items'),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _showDeleteFolderDialog(folderName),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ...datesInFolder.map((date) => _buildDateTile(
+                          date,
+                          ref.watch(expensesProvider(widget.trip['id'])),
+                          ref.watch(notesProvider(widget.trip['id'])),
+                          ref.watch(currencyProvider),
+                          widget.trip['id'],
+                          inFolder: folderName,
+                        )),
+                  ],
+                ),
+              );
+            },
+          );
+        }).toList(),
+      ],
+    );
+  }
+
+  Widget _buildDragHandle(BuildContext context, {String? inFolder}) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onLongPressStart: (details) {
+        if (inFolder != null) {
+          _onDragStarted(_draggedDate!, inFolder);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Icon(Icons.drag_handle, size: 20),
+      ),
+    );
+  }
+
+  Widget _buildDateTile(
+    DateTime date,
+    Map<DateTime, List<Map<String, dynamic>>> expenses,
+    Map<DateTime, String> notes,
+    String currency,
+    String tripId, {
+    String? inFolder,
+  }) {
+    bool isExpanded = expandedDates.contains(date);
+    double totalExpenses = _calculateTotalExpenses(date, expenses);
+
+    return Draggable<DateTime>(
+      data: date,
+      feedback: Material(
+        elevation: 4,
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.9,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Text(
+            DateFormat.yMMMd().format(date),
+            style: const TextStyle(fontSize: 16),
+          ),
+        ),
+      ),
+      childWhenDragging: Container(
+        height: 60,
+        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey),
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      onDragStarted: () => _onDragStarted(date, inFolder),
+      onDragEnd: (_) => _onDragEnded(),
+      child: DragTarget<DateTime>(
+        onAccept: (date) {
+          if (inFolder != null) {
+            _onFolderDropped(inFolder);
+          }
+        },
+        builder: (context, candidateData, rejectedData) {
+          return Card(
+            key: ValueKey(date),
+            elevation: 3,
+            margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            color: candidateData.isNotEmpty
+                ? Colors.blue.withOpacity(0.1)
+                : null,
+            child: Column(
+              children: [
+                ListTile(
+                  leading: _buildDragHandle(context, inFolder: inFolder),
+                  title: Row(
+                    children: [
+                      const Icon(Icons.calendar_today,
+                          size: 20, color: Colors.indigo),
+                      const SizedBox(width: 8),
+                      Text(
+                        DateFormat.yMMMd().format(date),
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '$currency${totalExpenses.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                            fontSize: 16, color: Colors.green),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          isExpanded ? Icons.expand_less : Icons.expand_more,
+                          color: Colors.blueAccent,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            if (isExpanded) {
+                              expandedDates.remove(date);
+                            } else {
+                              expandedDates.add(date);
+                            }
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                if (isExpanded)
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.5,
+                    ),
+                    child: SingleChildScrollView(
+                      child: ExpensesSection(
+                        date: date,
+                        expenses: expenses,
+                        notes: notes,
+                        currency: currency,
+                        tripId: tripId,
+                        expenseNameController: expenseNameController,
+                        expenseAmountController: expenseAmountController,
+                        noteController: noteController,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -144,12 +394,11 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
     final expenses = ref.watch(expensesProvider(tripId));
     final notes = ref.watch(notesProvider(tripId));
     final currency = ref.watch(currencyProvider);
-    final folders = ref.watch(dateFoldersProvider(tripId));
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.trip['title'] ?? 'Trip Details',
+          widget.trip['trip'] ?? 'Trip Details',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.indigoAccent,
@@ -188,8 +437,6 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
                     '${DateFormat.yMMMd().format(widget.trip['endDate'])}',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                  if (folders.isNotEmpty)
-                    _buildFoldersSection(folders, tripId),
                 ],
               ),
             ),
@@ -199,13 +446,42 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
               controller: _scrollController,
               physics: const BouncingScrollPhysics(),
               slivers: [
+                SliverToBoxAdapter(
+                  child: _buildFolderSection(),
+                ),
+                SliverToBoxAdapter(
+                  child: DragTarget<DateTime>(
+                    onAccept: (date) => _onUnfolderDropped(),
+                    builder: (context, candidateData, rejectedData) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Card(
+                          color: candidateData.isNotEmpty
+                              ? Colors.blue.withOpacity(0.1)
+                              : null,
+                          child: const Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Row(
+                              children: [
+                                Icon(Icons.folder_open, color: Colors.amber),
+                                SizedBox(width: 8),
+                                Text('Drop here to remove from folder'),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                      final date = _getFilteredDates()[index];
-                      return _buildDateTile(date, expenses, notes, currency, tripId);
+                      final date = tripDates[index];
+                      return _buildDateTile(
+                          date, expenses, notes, currency, tripId);
                     },
-                    childCount: _getFilteredDates().length,
+                    childCount: tripDates.length,
                   ),
                 ),
               ],
@@ -234,200 +510,6 @@ class _TripDetailsPageState extends ConsumerState<TripDetailsPage> {
         icon: const Icon(Icons.add),
         backgroundColor: Colors.indigoAccent,
       ),
-    );
-  }
-
-  Widget _buildDateTile(
-      DateTime date,
-      Map<DateTime, List<Map<String, dynamic>>> expenses,
-      Map<DateTime, String> notes,
-      String currency,
-      String tripId) {
-    bool isExpanded = expandedDates.contains(date);
-    double totalExpenses = _calculateTotalExpenses(date, expenses);
-
-    return Card(
-      key: ValueKey(date),
-      elevation: 3,
-      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          ListTile(
-            title: Row(
-              children: [
-                const Icon(Icons.calendar_today, size: 20, color: Colors.indigo),
-                const SizedBox(width: 8),
-                Text(
-                  DateFormat.yMMMd().format(date),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '$currency${totalExpenses.toStringAsFixed(2)}',
-                  style: const TextStyle(fontSize: 16, color: Colors.green),
-                ),
-                IconButton(
-                  icon: Icon(
-                    isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: Colors.blueAccent,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      if (isExpanded) {
-                        expandedDates.remove(date);
-                      } else {
-                        expandedDates.add(date);
-                      }
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-          if (isExpanded)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ExpensesSection(
-                date: date,
-                expenses: expenses,
-                notes: notes,
-                currency: currency,
-                tripId: tripId,
-                expenseNameController: expenseNameController,
-                expenseAmountController: expenseAmountController,
-                noteController: noteController,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFolderCard(DateFolder folder, String tripId) {
-    final isSelected = selectedFolderId == folder.id;
-
-    return DragTarget<DateTime>(
-      onAccept: (date) {
-        ref
-            .read(dateFoldersProvider(tripId).notifier)
-            .addDateToFolder(folder.id, date);
-      },
-      builder: (context, candidateData, rejectedData) {
-        return GestureDetector(
-          onTap: () => _toggleFolderSelection(folder.id),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            padding: const EdgeInsets.all(8),
-            margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            decoration: BoxDecoration(
-              color: isSelected 
-                  ? Colors.indigo[100] 
-                  : candidateData.isNotEmpty 
-                      ? Colors.indigo[50] 
-                      : Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isSelected 
-                    ? Colors.indigoAccent 
-                    : candidateData.isNotEmpty
-                        ? Colors.indigo
-                        : Colors.grey.shade300,
-                width: isSelected || candidateData.isNotEmpty ? 2 : 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            width: 140,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        folder.title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: Colors.indigo.shade800,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.redAccent, size: 18),
-                      onPressed: () {
-                        if (selectedFolderId == folder.id) {
-                          setState(() {
-                            selectedFolderId = null;
-                            showingAllDates = true;
-                          });
-                        }
-                        ref
-                            .read(dateFoldersProvider(tripId).notifier)
-                            .removeFolder(folder.id);
-                      },
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${folder.dates.length} ${folder.dates.length == 1 ? 'date' : 'dates'}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildFoldersSection(List<DateFolder> folders, String tripId) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(top: 8, bottom: 4),
-          child: Text(
-            'Folders',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.indigo),
-          ),
-        ),
-        SizedBox(
-          height: 80,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: folders.length,
-            separatorBuilder: (context, index) => const SizedBox(width: 8),
-            itemBuilder: (context, index) => _buildFolderCard(folders[index], tripId),
-          ),
-        ),
-      ],
     );
   }
 }
